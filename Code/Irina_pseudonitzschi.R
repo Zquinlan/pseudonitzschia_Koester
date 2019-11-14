@@ -139,7 +139,7 @@ set.seed(295034) # Setting the seed before we do any stats
 
 # STATS ANOVA -- OTUs One-way -----------------------------------------------------
 otu_aov <- otu_stats%>%
-  separate(sample_name, c(Organism, Replicate), sep = "_")%>%
+  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
   group_by(Taxonomy)%>%
   nest()%>%
   mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
@@ -149,6 +149,55 @@ otu_aov <- otu_stats%>%
   filter(term != "Residuals")%>%
   mutate(FDR = p.adjust(p.value, method = "BH"))%>%
   filter(FDR < 0.05)
+
+family_aov <- family_stats%>%
+  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  nest()%>%
+  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
+                      tidy()))%>%
+  unnest(data)%>%
+  ungroup()%>%
+  filter(term != "Residuals")%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))%>%
+  filter(FDR < 0.05)
+
+class_aov <- class_stats%>%
+  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  nest()%>%
+  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
+                      tidy()))%>%
+  unnest(data)%>%
+  ungroup()%>%
+  filter(term != "Residuals")%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))%>%
+  filter(FDR < 0.05)
+
+
+# STATS TUKEY -- Family -----------------------------------------------------
+family_tukey <- family_stats%>%
+  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  nest()%>%
+  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
+                      TukeyHSD(p.adjust.methods = "BH")%>%
+                      tidy()))%>%
+  unnest(data)%>%
+  filter(adj.p.value < 0.05)
+
+class_tukey <- class_stats%>%
+  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  nest()%>%
+  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
+                      TukeyHSD(p.adjust.methods = "BH")%>%
+                      tidy()))%>%
+  unnest(data)%>%
+  filter(adj.p.value < 0.05)
+
+write_csv(family_tukey, "Analyzed/family_tukey.csv")
+write_csv(class_tukey, "Analyzed/class_tukey.csv")
 
 # STATS ANOVA -- Quant Two-way -------------------------------------------------------------------
 aov_pvalues <- quant_stats%>%
@@ -435,6 +484,7 @@ pcoa_dom$values[1:10,]%>%
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
 
+## Plotting PCoAs
 pdf("Plots/PCoA_org_unfilfil_matrix_05.pdf", width = 7, height = 5)  
 pcoa_org$vectors%>%
   as.data.frame()%>%

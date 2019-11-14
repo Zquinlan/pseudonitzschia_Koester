@@ -29,11 +29,11 @@ tidy <- broom::tidy
 rename <- dplyr::rename
 
 # LOADING -- Dataframes ---------------------------------------------------
-quant_df <- read_csv("Pn_Ex2_MASTERx_quant.csv")
-cat_df <- read_csv("Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
+quant_df <- read_csv("./Raw/Pn_Ex2_MASTERx_quant.csv")
+cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
 
-otu_df <- read_tsv("Irina_2018_16s_exp_GEL.swarm.tax")
-otu_samples <- read_csv("Pn_16S_identifiers.csv")%>%
+otu_df <- read_tsv("./Raw/Irina_2018_16s_exp_GEL.swarm.tax")
+otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
   rename("sample_name" = "SampleID")%>%
   rename("sample_code" = "OTU_name")
 
@@ -264,10 +264,6 @@ multi_matrix_tidy_org <- matrix_multiplied_org%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates", "transformed"), sep = "_")
 
-write_csv(multi_matrix_tidy_org, "log10_multiplied_matrix_organism.csv")
-
-
-
 # MATRIX MULTIPLICATION -- DOM_Fil--------------------------------------------
 matrix_multiplied_dom <- quant_binary_dom%*%cat_clean_dom%>%
   as.data.frame()%>%
@@ -282,9 +278,6 @@ multi_matrix_tidy_dom <- matrix_multiplied_dom%>%
   gather(category, mult, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates", "transformed"), sep = "_")
-
-write_csv(multi_matrix_tidy_dom, "log10_multiplied_matrix_domfil.csv")
-
 
 # STATS RANDOM FOREST -- Matrix  Organism-------------------------------------------
 multi_matrix_random_forest_df <- multi_matrix_tidy_org%>%
@@ -303,7 +296,7 @@ rf_matrix_mda_org <- rf_matrix$importance%>%
   as.data.frame()%>%
   rownames_to_column("feature")
 
-write_csv(rf_matrix_mda_org,"RF_matrix_mda.05.csv")
+write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 
 ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
@@ -324,7 +317,7 @@ rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
   as.data.frame()%>%
   rownames_to_column("feature")
 
-write_csv(rf_matrix_UnfilFil_mda,"RF_matrix_UnfilFil_mda.05.csv")
+write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.05.csv")
 
 ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
@@ -343,7 +336,7 @@ mda_theme <- theme(panel.background = element_rect(fill = "transparent"), # bg o
                    legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
                    axis.line = element_line(color="black"))
 
-pdf("Mean_Decrease_Accuracy.pdf", height = 5, width = 7)
+pdf("./Plots/Mean_Decrease_Accuracy.pdf", height = 5, width = 7)
 ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
   ggtitle("Organism Mean Decrease Accuracy pval = 0.05") +
@@ -367,38 +360,38 @@ dev.off()
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
 ## Doing this between OTU and multiplied matrix
-correlation_matrix <- matrix_multiplied_all%>%
-  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")%>%
-  select(-c(Experiment, technical_replicates, transformed))%>%
-  group_by(Organism, biological_replicates, DOM_fil)%>%
-  summarize_if(is.numeric, mean)%>%
-  ungroup()
-
-correlation_microbe <- otu_stats%>%
-  select(-c(reads, ra))%>%
-  spread(Taxonomy, asin)
-
-correlation_table <- correlation_matrix%>%
-  unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
-  group_by(DOM_fil)%>%
-  nest()%>%
-  mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
-                      gather(microbe, microbe_asin, contains(";")))) 
-                      gather(category, category_asin, 2:1312)))
-
-
-correlation_pvals <- correlation_table%>%
-  unnest(data)%>%
-  ungroup()%>%
-  group_by(DOM_fil, microbe, category)%>%
-  filter(sum(category_asin) > 0)%>%
-  nest()%>%
-  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
-                      broom::tidy()))%>%
-  dplyr::select(-data)%>%
-  unnest(corr)%>%
-  mutate(FDR = p.adjust(p.value, method = "BH"))
+# correlation_matrix <- matrix_multiplied_all%>%
+#   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+#                           "technical_replicates", "transformed"), sep = "_")%>%
+#   select(-c(Experiment, technical_replicates, transformed))%>%
+#   group_by(Organism, biological_replicates, DOM_fil)%>%
+#   summarize_if(is.numeric, mean)%>%
+#   ungroup()
+# 
+# correlation_microbe <- otu_stats%>%
+#   select(-c(reads, ra))%>%
+#   spread(Taxonomy, asin)
+# 
+# correlation_table <- correlation_matrix%>%
+#   unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
+#   group_by(DOM_fil)%>%
+#   nest()%>%
+#   mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
+#                       gather(microbe, microbe_asin, contains(";")))) 
+#                       gather(category, category_asin, 2:1312)))
+# 
+# 
+# correlation_pvals <- correlation_table%>%
+#   unnest(data)%>%
+#   ungroup()%>%
+#   group_by(DOM_fil, microbe, category)%>%
+#   filter(sum(category_asin) > 0)%>%
+#   nest()%>%
+#   mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+#                       broom::tidy()))%>%
+#   dplyr::select(-data)%>%
+#   unnest(corr)%>%
+#   mutate(FDR = p.adjust(p.value, method = "BH"))
 
 
 
@@ -435,7 +428,8 @@ pcoa_all$values[1:10,]%>%
   ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
-  
+
+pdf("Plots/PCoA_all_matrix_05.pdf", width = 7, height = 5)  
 pcoa_all$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
@@ -457,5 +451,5 @@ pcoa_all$vectors%>%
         legend.background = element_rect(fill = "transparent"), # get rid of legend bg
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
         axis.line = element_line(color="black"))
-
+dev.off()
 

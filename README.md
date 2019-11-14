@@ -13,8 +13,9 @@ Output files from the R Pipeline
 Plots for basic visualization and supplements
 
 #### Code
-- Irina_pseudonitzschi.R:
+- Irina_pseudonitzschi.R: 
 Pipeline used to analyze the samples
+
 - Microbial Samples  
 Logfile from mothur 16s amplicon pipeline  
 relative abundance and taxonomy .txt output files from mothur with OTU data

@@ -3,13 +3,13 @@
 
 ### Folders:
 #### Data
-- Raw
+- Raw:
 Raw dataframes used at the beginning of the R pipeline
   
-- Analyzed: 
+- Analyzed:
 Output files from the R Pipeline
   
-- Plots: 
+- Plots:
 Plots for basic visualization and supplements
 
 #### Code

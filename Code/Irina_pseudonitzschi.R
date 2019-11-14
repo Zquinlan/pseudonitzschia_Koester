@@ -137,7 +137,20 @@ class_stats <- otu_clean%>%
 set.seed(295034) # Setting the seed before we do any stats
 
 
-# Anova -------------------------------------------------------------------
+# STATS ANOVA -- OTUs One-way -----------------------------------------------------
+otu_aov <- otu_stats%>%
+  separate(sample_name, c(Organism, Replicate), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  nest()%>%
+  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
+                      tidy()))%>%
+  unnest(data)%>%
+  ungroup()%>%
+  filter(term != "Residuals")%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))%>%
+  filter(FDR < 0.05)
+
+# STATS ANOVA -- Quant Two-way -------------------------------------------------------------------
 aov_pvalues <- quant_stats%>%
   group_by(feature_number)%>%
   nest()%>%
@@ -165,28 +178,6 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   as.factor()%>%
   unique()%>%
   as.vector()
-
-# PRE-MATRIX QUANT AND CAT -- all for pcoa and permanova ---------------------------------------------
-cat_clean_all <- cat_stats%>%
-  filter(FeatureID %in% aov_all_sigs)%>%
-  column_to_rownames("FeatureID")%>%
-  data.matrix(rownames.force = NA)
-
-canopus_available_features_all <- rownames(cat_clean_all)%>% as.vector()
-
-quant_binary_all <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
-  filter(feature_number %in% canopus_available_features_all)%>%
-  unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")%>%
-  group_by(feature)%>%
-  mutate(binary = case_when(asin > 0.01*max(asin) ~ 1,
-                            TRUE ~ 0))%>%
-  ungroup()%>%
-  select(-asin)%>%
-  spread(feature_number, binary)%>%
-  column_to_rownames("feature")%>%
-  data.matrix(rownames.force = NA)
-
 
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 cat_clean_org <- cat_stats%>%
@@ -230,23 +221,6 @@ quant_binary_dom <- quant_stats%>%  ## Okay so here we are first making the data
   spread(feature_number, binary)%>%
   column_to_rownames("feature")%>%
   data.matrix(rownames.force = NA)
-
-
-# MATRIX MULTIPLICATION --  all--------------------------------------------
-matrix_multiplied_all <- quant_binary_all%*%cat_clean_all%>%
-  as.data.frame()%>%
-  rownames_to_column(var = "sample_code")%>%
-  gather(category, mult, 2:ncol(.))%>%
-  filter(category != "DBE-O")%>%
-  mutate(log10 = log10(mult + 1))%>%
-  select(-mult)%>%
-  spread(category, log10)
-
-multi_matrix_tidy_all <- matrix_multiplied_all%>%
-  gather(category, mult, 2:ncol(.))%>%
-  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")
-
 
 
 # MATRIX MULTIPLICATION --  Organism--------------------------------------------
@@ -301,7 +275,7 @@ write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
 
-# STATS RANDOM FOREST -- Matrix  Ful_Unfil -------------------------------------------
+# STATS RANDOM FOREST -- Matrix  Fil_Unfil -------------------------------------------
 multi_matrix_random_forest_UnfilFil_df <- multi_matrix_tidy_dom%>%
   spread(category,mult)%>%
   select(c(DOM_fil, 7:ncol(.)))%>%
@@ -397,22 +371,36 @@ dev.off()
 
 
 
-# STATS PERMANOVA - all ---------------------------------------------------
-matrix_permanova_all <- matrix_multiplied_all%>%
+# STATS PERMANOVA - org and unfilfil  ---------------------------------------------------
+matrix_permanova_org <- matrix_multiplied_org%>%
   gather(category, mult, 2:ncol(.))%>%
   mutate(mult = mult +1)%>%
   spread(category, mult)%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates", "transformed"), sep = "_")
 
-permanova_all <- matrix_permanova_all%>%
+permanova_org <- matrix_permanova_org%>%
   # column_to_rownames("sample_code")%>%
   adonis(.[7:ncol(.)] ~ Organism*DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
 
-permanova_all
+permanova_org
 
-# Visualization -- PCoA org -------------------------------------------------
-pcoa_all <- matrix_multiplied_all%>%
+matrix_permanova_dom <- matrix_multiplied_dom%>%
+  gather(category, mult, 2:ncol(.))%>%
+  mutate(mult = mult +1)%>%
+  spread(category, mult)%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+                          "technical_replicates", "transformed"), sep = "_")
+
+permanova_dom <- matrix_permanova_dom%>%
+  # column_to_rownames("sample_code")%>%
+  adonis(.[7:ncol(.)] ~ Organism*DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
+
+permanova_dom
+
+# Visualization -- PCoA org and unfilfil -------------------------------------------------
+## Organism Matrix
+pcoa_org <- matrix_multiplied_org%>%
   gather(cat, val, 2:ncol(.))%>%
   mutate(val = val+ min(val) +1)%>%
   spread(cat, val)%>%
@@ -421,7 +409,7 @@ pcoa_all <- matrix_multiplied_all%>%
   pcoa()
   
 
-pcoa_all$values[1:10,]%>%
+pcoa_org$values[1:10,]%>%
   as.data.frame()%>%
   rownames_to_column("Axis")%>%
   mutate(axis = as.numeric(Axis))%>%
@@ -429,8 +417,26 @@ pcoa_all$values[1:10,]%>%
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
 
-pdf("Plots/PCoA_all_matrix_05.pdf", width = 7, height = 5)  
-pcoa_all$vectors%>%
+## Unfil vs Fil matrix
+pcoa_dom <- matrix_multiplied_dom%>%
+  gather(cat, val, 2:ncol(.))%>%
+  mutate(val = val+ min(val) +1)%>%
+  spread(cat, val)%>%
+  column_to_rownames("sample_code")%>%
+  vegdist(na.rm = TRUE)%>%
+  pcoa()
+
+
+pcoa_dom$values[1:10,]%>%
+  as.data.frame()%>%
+  rownames_to_column("Axis")%>%
+  mutate(axis = as.numeric(Axis))%>%
+  ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
+  geom_bar(stat = "identity") +
+  geom_text(size = 3, color = "red", vjust = -0.5)
+
+pdf("Plots/PCoA_org_unfilfil_matrix_05.pdf", width = 7, height = 5)  
+pcoa_org$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
@@ -438,8 +444,8 @@ pcoa_all$vectors%>%
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
   geom_point(stat = "identity") +
   scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
-  ylab(str_c("Axis 2", " (", round(pcoa_all$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
-  xlab(str_c("Axis 1", " (", round(pcoa_all$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  ylab(str_c("Axis 2", " (", round(pcoa_org$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_org$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         axis.title.x = element_text(size=14, face="bold"),
@@ -450,6 +456,30 @@ pcoa_all$vectors%>%
         panel.grid.minor = element_blank(), # get rid of minor grid
         legend.background = element_rect(fill = "transparent"), # get rid of legend bg
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
-        axis.line = element_line(color="black"))
+        axis.line = element_line(color="black"))+
+  ggtitle("Organism 0.05")
+
+pcoa_dom$vectors%>%
+  as.data.frame()%>%
+  rownames_to_column("sample_code")%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+                          "technical_replicates", "transformed"), sep = "_")%>%  
+  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
+  geom_point(stat = "identity") +
+  scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
+  ylab(str_c("Axis 2", " (", round(pcoa_dom$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_dom$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+        axis.title.x = element_text(size=14, face="bold"),
+        axis.title.y = element_text(size=14, face="bold"),
+        axis.text.x = element_text(face="bold", size=14),
+        axis.text.y = element_text(face="bold", size=14),
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+        axis.line = element_line(color="black"))+
+  ggtitle("UnfilFil 0.05")
 dev.off()
 

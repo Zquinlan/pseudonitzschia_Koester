@@ -467,6 +467,15 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
 write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 
 
+# POST-STATS -- mini-matrix -----------------------------------------------
+mini_matrix_all <- matrix_multiplied_all%>%
+  gather(feature, val, 2:ncol(.))%>%
+  mutate(feature = gsub("[[:space:]]", ".", feature))%>%
+  filter(feature %in% unique(c(important_unfil_compounds,important_org_compounds)))%>%
+  spread(feature, val)
+
+write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
+
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ## Organism Matrix
 pcoa_org <- matrix_multiplied_org%>%

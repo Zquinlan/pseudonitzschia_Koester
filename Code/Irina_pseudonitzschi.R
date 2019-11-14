@@ -474,13 +474,32 @@ permanova_dom
 important_org_compounds <- (rf_matrix_mda_org%>%
                               mutate(feature = gsub("X", "", feature))%>%
                               filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
-                                       sd(MeanDecreaseAccuracy)))$feature
+                                       sd(MeanDecreaseAccuracy)))$feature%>%
+  as.vector()
 
 mini_matrix_org <- matrix_multiplied_org%>%
   gather(feature, val, 2:ncol(.))%>%
-  mutate(feature, gsub(" ", ".", feature))
+  mutate(feature = gsub("[[:space:]]", ".", feature))%>%
   filter(feature %in% important_org_compounds)%>%
   spread(feature, val)
+
+write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
+
+# POST-STATS -- mini-matrix -----------------------------------------------
+important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
+                              mutate(feature = gsub("X", "", feature))%>%
+                              filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
+                                       sd(MeanDecreaseAccuracy)))$feature%>%
+  as.vector()
+
+mini_matrix_dom <- matrix_multiplied_dom%>%
+  gather(feature, val, 2:ncol(.))%>%
+  mutate(feature = gsub("[[:space:]]", ".", feature))%>%
+  filter(feature %in% important_unfil_compounds)%>%
+  spread(feature, val)
+
+write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
+
 
 # Visualization -- PCoA org and unfilfil -------------------------------------------------
 ## Organism Matrix

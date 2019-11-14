@@ -368,40 +368,6 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
   geom_point(stat = "identity")
 
 
-# GRAPHING -- Mean Decrease Accuracy scatterplots -------------------------
-mda_theme <- theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
-                   plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
-                   axis.title.x = element_text(size=14, face="bold"),
-                   axis.title.y = element_text(size=14, face="bold"),
-                   axis.text.x = element_blank(),
-                   axis.text.y = element_blank(),
-                   panel.grid.major = element_blank(), # get rid of major grid
-                   panel.grid.minor = element_blank(), # get rid of minor grid
-                   legend.background = element_rect(fill = "transparent"), # get rid of legend bg
-                   legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
-                   axis.line = element_line(color="black"))
-
-pdf("./Plots/Mean_Decrease_Accuracy.pdf", height = 5, width = 7)
-ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
-  geom_point(stat = "identity") +
-  ggtitle("Organism Mean Decrease Accuracy pval = 0.05") +
-  xlab("Features (decreasing mda)") +
-  ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
-             col = "red") +
-  mda_theme
-
-ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
-  geom_point(stat = "identity") +
-  ggtitle("FilUnfil Mean Decrease Accuracy pval = 0.05") +
-  xlab("Features (decreasing mda)") +
-  ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
-             col = "red") +
-  mda_theme
-dev.off()
-
-
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
 ## Doing this between OTU and multiplied matrix
@@ -501,7 +467,7 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
 write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 
 
-# Visualization -- PCoA org and unfilfil -------------------------------------------------
+# VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ## Organism Matrix
 pcoa_org <- matrix_multiplied_org%>%
   gather(cat, val, 2:ncol(.))%>%
@@ -585,5 +551,39 @@ pcoa_dom$vectors%>%
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
         axis.line = element_line(color="black"))+
   ggtitle("UnfilFil 0.05")
+dev.off()
+
+
+# VISUALIZATION -- Mean Decrease Accuracy scatterplots -------------------------
+mda_theme <- theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+                   plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+                   axis.title.x = element_text(size=14, face="bold"),
+                   axis.title.y = element_text(size=14, face="bold"),
+                   axis.text.x = element_blank(),
+                   axis.text.y = element_blank(),
+                   panel.grid.major = element_blank(), # get rid of major grid
+                   panel.grid.minor = element_blank(), # get rid of minor grid
+                   legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+                   legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+                   axis.line = element_line(color="black"))
+
+pdf("./Plots/Mean_Decrease_Accuracy.pdf", height = 5, width = 7)
+ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
+  geom_point(stat = "identity") +
+  ggtitle("Organism Mean Decrease Accuracy pval = 0.05") +
+  xlab("Features (decreasing mda)") +
+  ylab("Mean Decrease Accuracy") +
+  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
+             col = "red") +
+  mda_theme
+
+ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
+  geom_point(stat = "identity") +
+  ggtitle("FilUnfil Mean Decrease Accuracy pval = 0.05") +
+  xlab("Features (decreasing mda)") +
+  ylab("Mean Decrease Accuracy") +
+  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
+             col = "red") +
+  mda_theme
 dev.off()
 

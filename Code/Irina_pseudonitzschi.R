@@ -274,6 +274,18 @@ rf_quant_org <- quant_rf_org$importance%>%
 
 write_csv(rf_quant_org, "Analyzed/RF_quant_organism.csv")
 
+# MINI QUANT TABLE TEST ---------------------------------------------------
+important_quant <- (rf_quant_org%>%
+    mutate(feature = gsub("X", "", feature))%>%
+    filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
+  as.vector()
+
+mini_quant <-quant_stats%>%
+  filter(feature_number %in% important_quant)%>%
+  spread(feature_number, asin)
+
+write_csv(mini_quant, "Analyzed/mini_quant.csv")  
+
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 cat_clean_org <- cat_stats%>%
   filter(FeatureID %in% aov_organism_sigs)%>%

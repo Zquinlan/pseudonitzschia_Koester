@@ -388,7 +388,7 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
 ## Doing this between OTU and multiplied matrix
-correlation_matrix <- matrix_multiplied_dom%>%
+correlation_matrix <- matrix_multiplied_org%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
                           "technical_replicates"), sep = "_")%>%
   select(-c(Experiment, technical_replicates))%>%

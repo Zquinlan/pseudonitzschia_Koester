@@ -245,7 +245,7 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   unique()%>%
   as.vector()
 
-# RF - QUANT NOT BINARY TEST ----------------------------------------------
+# STATS RANDOM FOREST -QUANT NOT BINARY TEST ----------------------------------------------
 quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% aov_organism_sigs)%>%
   mutate(asin = as.numeric(asin))%>%
@@ -274,7 +274,7 @@ rf_quant_org <- quant_rf_org$importance%>%
 
 write_csv(rf_quant_org, "Analyzed/RF_quant_organism.csv")
 
-# MINI QUANT TABLE TEST ---------------------------------------------------
+# POST-STATS -- MINI QUANT TABLE TEST ---------------------------------------------------
 important_quant <- (rf_quant_org%>%
     mutate(feature = gsub("X", "", feature))%>%
     filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%

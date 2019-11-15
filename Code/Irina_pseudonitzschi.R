@@ -452,7 +452,7 @@ permanova_dom <- matrix_permanova_dom%>%
 permanova_dom
 
 
-# POST-STATS -- mini-matrix -----------------------------------------------
+# POST-STATS -- mini-matrix organism -----------------------------------------------
 important_org_compounds <- (rf_matrix_mda_org%>%
                               mutate(feature = gsub("X", "", feature))%>%
                               filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
@@ -467,7 +467,7 @@ mini_matrix_org <- matrix_multiplied_org%>%
 
 write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
 
-# POST-STATS -- mini-matrix -----------------------------------------------
+# POST-STATS -- mini-matrix unfilfil -----------------------------------------------
 important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
                               mutate(feature = gsub("X", "", feature))%>%
                               filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
@@ -483,14 +483,33 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
 write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 
 
-# POST-STATS -- mini-matrix -----------------------------------------------
-mini_matrix_all <- matrix_multiplied_all%>%
-  gather(feature, val, 2:ncol(.))%>%
-  mutate(feature = gsub("[[:space:]]", ".", feature))%>%
-  filter(feature %in% unique(c(important_unfil_compounds,important_org_compounds)))%>%
-  spread(feature, val)
 
-write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
+# POST STATS -- matrix for HC ---------------------------------------------
+otu_hc <- otu_stats%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  select(-c(reads, ra, asin))%>%
+  spread(Taxonomy, zscore)%>%
+  rename("sample_code" = "sample_name")
+
+hc_matrix <- mini_matrix_org%>%
+  gather(category, asin, 2:ncol(.))%>%
+  separate(sample_code, c("Experiment", "Organism",
+                          "biological_replicate", "DOM_fil",
+                          "technical_replicate"), sep = "_")%>%
+  group_by(category, Organism, biological_replicate, DOM_fil)%>%
+  select(-technical_replicate)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  filter(DOM_fil == "DOM")%>%
+  select(-c(asin, DOM_fil))%>%
+  unite(sample_code, c("Organism", "biological_replicate"), sep = "_")%>%
+  spread(category, zscore)%>%
+  left_join(otu_hc, by = "sample_code")
+  
+  
+write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
+
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ## Organism Matrix
@@ -611,4 +630,6 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
              col = "red") +
   mda_theme
 dev.off()
+
+
 

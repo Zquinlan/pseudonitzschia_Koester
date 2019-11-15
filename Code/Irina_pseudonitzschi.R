@@ -334,21 +334,7 @@ rf_matrix <- randomForest(Organism ~ ., multi_matrix_random_forest_df,
 
 rf_matrix_mda_org <- rf_matrix$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")%>%
-  mutate(delicatissima_important = case_when(delicatissima > mean(delicatissima, na.rm = TRUE) +sd(delicatissima, na.rm = TRUE) ~ "important",
-                                             TRUE ~ "not_important"),
-         galaxiae_important = case_when(galaxiae > mean(galaxiae, na.rm = TRUE) +sd(galaxiae, na.rm = TRUE) ~ "important",
-                                        TRUE ~ "not_important"),
-         hasleana_important = case_when(hasleana > mean(hasleana, na.rm = TRUE) +sd(hasleana, na.rm = TRUE) ~ "important",
-                                        TRUE ~ "not_important"),
-         multiseries_important = case_when(multiseries > mean(multiseries, na.rm = TRUE) +sd(multiseries, na.rm = TRUE) ~ "important",
-                                           TRUE ~ "not_important"),
-         subpacifica_important = case_when(subpacifica > mean(subpacifica, na.rm = TRUE) +sd(subpacifica, na.rm = TRUE) ~ "important",
-                                           TRUE ~ "not_important"),
-         MeanDecreaseAccuracy_important = case_when(MeanDecreaseAccuracy > mean(MeanDecreaseAccuracy, na.rm = TRUE) +sd(MeanDecreaseAccuracy, na.rm = TRUE) ~ "important",
-                                                    TRUE ~ "not_important"),
-         MeanDecreaseGini_important = case_when(MeanDecreaseGini > mean(MeanDecreaseGini, na.rm = TRUE) +sd(MeanDecreaseGini, na.rm = TRUE) ~ "important",
-                                                TRUE ~ "not_important"))
+  rownames_to_column("feature")
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 
@@ -369,15 +355,7 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
 
 rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")%>%
-  mutate(DOM_important = case_when(DOM > mean(DOM, na.rm = TRUE) +sd(DOM, na.rm = TRUE) ~ "important",
-                                   TRUE ~ "not_important"),
-         Unfil_important = case_when(Unfil > mean(Unfil, na.rm = TRUE) +sd(Unfil, na.rm = TRUE) ~ "important",
-                                     TRUE ~ "not_important"),
-         MeanDecreaseAccuracy_important = case_when(MeanDecreaseAccuracy > mean(MeanDecreaseAccuracy, na.rm = TRUE) +sd(MeanDecreaseAccuracy, na.rm = TRUE) ~ "important",
-                                                    TRUE ~ "not_important"),
-         MeanDecreaseGini_important = case_when(MeanDecreaseGini > mean(MeanDecreaseGini, na.rm = TRUE) +sd(MeanDecreaseGini, na.rm = TRUE) ~ "important",
-                                                TRUE ~ "not_important"))
+  rownames_to_column("feature")
 
 write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.05.csv")
 
@@ -455,8 +433,7 @@ permanova_dom
 # POST-STATS -- mini-matrix organism -----------------------------------------------
 important_org_compounds <- (rf_matrix_mda_org%>%
                               mutate(feature = gsub("X", "", feature))%>%
-                              filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
-                                       sd(MeanDecreaseAccuracy)))$feature%>%
+                              top_n(30, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 mini_matrix_org <- matrix_multiplied_org%>%
@@ -470,8 +447,7 @@ write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
 # POST-STATS -- mini-matrix unfilfil -----------------------------------------------
 important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
                               mutate(feature = gsub("X", "", feature))%>%
-                              filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) +
-                                       sd(MeanDecreaseAccuracy)))$feature%>%
+                                top_n(30, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 mini_matrix_dom <- matrix_multiplied_dom%>%
@@ -617,7 +593,8 @@ ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Me
   ggtitle("Organism Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
+  geom_hline(yintercept = (top_n(rf_matrix_mda_org, 30, MeanDecreaseAccuracy)%>%
+               arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
              col = "red") +
   mda_theme
 
@@ -626,10 +603,9 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
   ggtitle("FilUnfil Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = mean(rf_matrix_mda_org$MeanDecreaseAccuracy) + sd(rf_matrix_mda_org$MeanDecreaseAccuracy),
+  geom_hline(yintercept = (top_n(rf_matrix_UnfilFil_mda, 30, MeanDecreaseAccuracy)%>%
+               arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
              col = "red") +
   mda_theme
 dev.off()
-
-
 

@@ -245,6 +245,20 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   unique()%>%
   as.vector()
 
+# RF - QUANT NOT BINARY TEST ----------------------------------------------
+quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
+  filter(feature_number %in% aov_organism_sigs)%>%
+  mutate(asin = as.numeric(asin))%>%
+  spread(feature_number, asin)%>%
+  select(-c(Experiment, biological_replicates, DOM_fil, technical_replicates))%>%
+  mutate(Organism = as.factor(Organism))
+
+names(quant_org_rf_prep) <- make.names(names(quant_org_rf_prep))
+  
+quant_rf_org <- randomForest(Organism ~ ., quant_org_rf_prep, 
+               importance = TRUE, proximity = TRUE, nPerm = 10,
+               ntree = 50000, na.action = na.exclude)
+
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 cat_clean_org <- cat_stats%>%
   filter(FeatureID %in% aov_organism_sigs)%>%

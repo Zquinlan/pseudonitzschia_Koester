@@ -245,7 +245,7 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   unique()%>%
   as.vector()
 
-# STATS RANDOM FOREST -QUANT NOT BINARY TEST ----------------------------------------------
+# STATS RANDOM FOREST - QUANT NOT BINARY TEST ----------------------------------------------
 quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% aov_organism_sigs)%>%
   mutate(asin = as.numeric(asin))%>%
@@ -273,6 +273,8 @@ rf_quant_org <- quant_rf_org$importance%>%
                                              TRUE ~ "not important"))
 
 write_csv(rf_quant_org, "Analyzed/RF_quant_organism.csv")
+
+
 
 # POST-STATS -- MINI QUANT TABLE TEST ---------------------------------------------------
 important_quant <- (rf_quant_org%>%
@@ -308,6 +310,30 @@ quant_binary_org <- quant_stats%>%  ## Okay so here we are first making the data
   data.matrix(rownames.force = NA)
 
 
+# # PRE-MATRIX QUANT AND CAT -- DOM CAT BINARY -------------------------
+# cat_binary <- cat_df%>%
+#   filter(FeatureID %in% aov_organism_sigs)%>%
+#   select(1, 25:ncol(.))%>%
+#   gather(cat, prob, 2:ncol(.))%>%
+#   mutate(binary = case_when(prob >= quantile(prob, 0.25) & prob != 0 ~ 1,
+#                             prob < 0.5 ~ 0,
+#                             TRUE ~ 0))%>%
+#   select(-prob)%>%
+#   spread(cat, binary)%>%
+#   filter(FeatureID %in% aov_organism_sigs)%>%
+#   column_to_rownames("FeatureID")%>%
+#   data.matrix(rownames.force = NA)
+# 
+# canopus_available_features_org_binary <- rownames(cat_binary)%>% as.vector()
+# 
+# quant_matrix_prep <- quant_stats%>%
+#   filter(feature_number %in% canopus_available_features_org_binary)%>%
+#   unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+#                    "technical_replicates"), sep = "_")%>%
+#   spread(feature_number, asin)%>%
+#   column_to_rownames("feature")%>%
+#   data.matrix(rownames.force = NA)
+
 # PRE-MATRIX QUANT AND CAT -- DOM_Fil ---------------------------------------------
 cat_clean_dom <- cat_stats%>%
   filter(FeatureID %in% aov_DOM_fil_sigs)%>%
@@ -329,6 +355,18 @@ quant_binary_dom <- quant_stats%>%  ## Okay so here we are first making the data
   column_to_rownames("feature")%>%
   data.matrix(rownames.force = NA)
 
+
+
+# # MATRIX MULTIPLICATION -- cat binary DOM -------------------------------------
+# matrix_multiplied_dom_cbin <- quant_matrix_prep%*%cat_binary%>%
+#   as.data.frame()%>%
+#   rownames_to_column(var = "sample_code")%>%
+#   gather(category, mult, 2:ncol(.))%>%
+#   filter(category != "DBE-O")%>%
+#   mutate(log10 = log10(mult + 1))%>%
+#   select(-mult)%>%
+#   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+#                           "technical_replicates"), sep = "_")
 
 # MATRIX MULTIPLICATION --  Organism--------------------------------------------
 matrix_multiplied_org <- quant_binary_org%*%cat_clean_org%>%
@@ -360,6 +398,36 @@ multi_matrix_tidy_dom <- matrix_multiplied_dom%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_")
 
+# # STATS RANDOM FOREST -- Matrix dom cat binary ----------------------------------
+# multi_matrix_random_forest_df <- matrix_multiplied_dom_cbin%>%
+#   spread(category, log10)%>%
+#   select(c(Organism, 7:ncol(.)))%>%
+#   mutate(Organism = as.factor(Organism))
+# 
+# names(multi_matrix_random_forest_df) <- make.names(names(multi_matrix_random_forest_df))
+# 
+# rf_matrix_cat_bin_dom <- randomForest(Organism ~ ., multi_matrix_random_forest_df, 
+#                           importance = TRUE, proximity = TRUE, nPerm = 10,
+#                           ntree = 50000, na.action = na.exclude)
+# 
+# top30_catbin_dom <- (rf_matrix_cat_bin_dom$importance%>% 
+#                 as.data.frame()%>%
+#                 rownames_to_column("feature")%>%
+#                 top_n(30, MeanDecreaseAccuracy))$feature%>%
+#   as.vector()
+# 
+# 
+# rf_matrix_cat_bin_dom_mda <- rf_matrix_cat_bin_dom$importance%>%
+#   as.data.frame()%>%
+#   rownames_to_column("feature")%>%
+#   mutate(mean_decrease_important = case_when(feature %like any% top30_catbin_dom ~ "important",
+#                                              TRUE ~ "not important"))
+# 
+# # write_csv(rf_matrix_cat_bin_dom_mda,"./Analyzed/RF_matrix_catbin_mda.05.csv")
+# 
+# ggplot(rf_matrix_cat_bin_dom_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
+#   geom_point(stat = "identity")
+
 # STATS RANDOM FOREST -- Matrix  Organism-------------------------------------------
 multi_matrix_random_forest_df <- multi_matrix_tidy_org%>%
   spread(category, mult)%>%
@@ -384,7 +452,22 @@ rf_matrix_mda_org <- rf_matrix$importance%>%
   as.data.frame()%>%
   rownames_to_column("feature")%>%
   mutate(mean_decrease_important = case_when(feature %like any% top30_org ~ "important",
-                                             TRUE ~ "not important"))
+                                             TRUE ~ "not important"),
+         multiseries_important = case_when(multiseries >= (top_n(., 30, multiseries)%>%
+                                                             arrange(-multiseries))$multiseries[30]~ "important",
+                                           TRUE ~ "not important"),
+         delicatissima_important = case_when(delicatissima >= (top_n(., 30, delicatissima)%>%
+                                                             arrange(-delicatissima))$delicatissima[30]~ "important",
+                                           TRUE ~ "not important"),
+         galaxiae_important = case_when(galaxiae >= (top_n(., 30, galaxiae)%>%
+                                                             arrange(-galaxiae))$galaxiae[30]~ "important",
+                                           TRUE ~ "not important"),
+         hasleana_important = case_when(hasleana >= (top_n(., 30, hasleana)%>%
+                                                             arrange(-hasleana))$hasleana[30]~ "important",
+                                           TRUE ~ "not important"),
+         subpacifica_important = case_when(subpacifica >= (top_n(., 30, subpacifica)%>%
+                                                          arrange(-subpacifica))$subpacifica[30]~ "important",
+                                           TRUE ~ "not important"))
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 
@@ -490,8 +573,13 @@ permanova_dom
 
 # POST-STATS -- mini-matrix organism -----------------------------------------------
 important_org_compounds <- (rf_matrix_mda_org%>%
-                              mutate(feature = gsub("X", "", feature))%>%
-                              top_n(30, MeanDecreaseAccuracy))$feature%>%
+                              select(feature, ends_with("_important"))%>%
+                              gather(species, important, 2:ncol(.))%>%
+                              group_by(feature)%>%
+                              filter(important == "important")%>%
+                              ungroup()%>%
+                              mutate(feature = gsub("X", "", feature)))$feature%>%
+  unique()%>%
   as.vector()
 
 mini_matrix_org <- matrix_multiplied_org%>%

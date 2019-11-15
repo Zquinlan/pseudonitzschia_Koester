@@ -259,6 +259,21 @@ quant_rf_org <- randomForest(Organism ~ ., quant_org_rf_prep,
                importance = TRUE, proximity = TRUE, nPerm = 10,
                ntree = 50000, na.action = na.exclude)
 
+top30_org_quant <- (quant_rf_org$importance%>% 
+                as.data.frame()%>%
+                rownames_to_column("feature")%>%
+                top_n(30, MeanDecreaseAccuracy))$feature%>%
+  as.vector()
+
+
+rf_quant_org <- quant_rf_org$importance%>%
+  as.data.frame()%>%
+  rownames_to_column("feature")%>%
+  mutate(mean_decrease_important = case_when(feature %like any% top30_org_quant ~ "important",
+                                             TRUE ~ "not important"))
+
+write_csv(rf_quant_org, "Analyzed/RF_quant_organism.csv")
+
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 cat_clean_org <- cat_stats%>%
   filter(FeatureID %in% aov_organism_sigs)%>%

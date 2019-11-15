@@ -29,8 +29,9 @@ tidy <- broom::tidy
 rename <- dplyr::rename
 
 # LOADING -- Dataframes ---------------------------------------------------
-quant_df <- read_csv("./Raw/Pn_Ex2_MASTERx_quant.csv")
+quant_df <- read_csv("./Raw/Pn_Ex2_MASTERx_quant_raw.csv")
 cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
+chl <- read_xlsx("Raw/Pn_Ex2_Chlorophyll.xlsx")
 
 otu_df <- read_tsv("./Raw/Irina_2018_16s_exp_GEL.swarm.tax")
 otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
@@ -40,13 +41,29 @@ otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
 # CLEANING -- Stats dataframes --------------------------------------------------------------------------------
 ## Cleaning all of the data
 quant_stats <- quant_df%>%
-  gather(sample_code, asin, 2:41)%>%
+  gather(sample_code, xic, 2:ncol(.))%>%
+  separate(sample_code, c("Experiment", "Organism", 
+                          "biological_replicates", "DOM_fil", 
+                          "technical_replicates"), sep = "_")%>%
+  unite(sample_code, c("Experiment", "Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
+  left_join(chl, by = "sample_code")%>%
+  select(-sample_code)%>%
+  unite(sample_code, c("Experiment", "Organism", 
+                      "biological_replicates", "DOM_fil", 
+                      "technical_replicates"), sep = "_")%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic),
+         chl_norm = ra/chl,
+         asin = asin(sqrt(chl_norm)))%>%
+  ungroup()%>%
   rename("feature_number" = "SampleID")%>%
-  group_by(feature_number)%>%
-  filter(sum(asin) != 0)%>%
-  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")%>%
-  ungroup()
+  select(-c(ra, xic,  chl_norm, chl))%>%
+  # group_by(feature_number)%>%
+  # filter(sum(.$asin) != 0)%>%
+  separate(sample_code, c("Experiment", "Organism", 
+                          "biological_replicates", "DOM_fil", 
+                          "technical_replicates"), sep = "_")
+  # ungroup()
 
 cat_stats <- cat_df%>%
   select(1, 25:ncol(.))%>%
@@ -239,7 +256,7 @@ canopus_available_features_org <- rownames(cat_clean_org)%>% as.vector()
 quant_binary_org <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% canopus_available_features_org)%>%
   unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                   "technical_replicates", "transformed"), sep = "_")%>%
+                   "technical_replicates"), sep = "_")%>%
   group_by(feature)%>%
   mutate(binary = case_when(asin > 0.01*max(asin) ~ 1,
                             TRUE ~ 0))%>%
@@ -261,7 +278,7 @@ canopus_available_features_dom <- rownames(cat_clean_dom)%>% as.vector()
 quant_binary_dom <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% canopus_available_features_dom)%>%
   unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                   "technical_replicates", "transformed"), sep = "_")%>%
+                   "technical_replicates"), sep = "_")%>%
   group_by(feature)%>%
   mutate(binary = case_when(asin > 0.01*max(asin) ~ 1,
                             TRUE ~ 0))%>%
@@ -285,7 +302,7 @@ matrix_multiplied_org <- quant_binary_org%*%cat_clean_org%>%
 multi_matrix_tidy_org <- matrix_multiplied_org%>%
   gather(category, mult, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")
+                          "technical_replicates"), sep = "_")
 
 # MATRIX MULTIPLICATION -- DOM_Fil--------------------------------------------
 matrix_multiplied_dom <- quant_binary_dom%*%cat_clean_dom%>%
@@ -300,7 +317,7 @@ matrix_multiplied_dom <- quant_binary_dom%*%cat_clean_dom%>%
 multi_matrix_tidy_dom <- matrix_multiplied_dom%>%
   gather(category, mult, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")
+                          "technical_replicates"), sep = "_")
 
 # STATS RANDOM FOREST -- Matrix  Organism-------------------------------------------
 multi_matrix_random_forest_df <- multi_matrix_tidy_org%>%
@@ -371,41 +388,40 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
 ## Doing this between OTU and multiplied matrix
-# correlation_matrix <- matrix_multiplied_all%>%
-#   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-#                           "technical_replicates", "transformed"), sep = "_")%>%
-#   select(-c(Experiment, technical_replicates, transformed))%>%
-#   group_by(Organism, biological_replicates, DOM_fil)%>%
-#   summarize_if(is.numeric, mean)%>%
-#   ungroup()
-# 
-# correlation_microbe <- otu_stats%>%
-#   select(-c(reads, ra))%>%
-#   spread(Taxonomy, asin)
-# 
-# correlation_table <- correlation_matrix%>%
-#   unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
-#   group_by(DOM_fil)%>%
-#   nest()%>%
-#   mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
-#                       gather(microbe, microbe_asin, contains(";")))) 
-#                       gather(category, category_asin, 2:1312)))
-# 
-# 
-# correlation_pvals <- correlation_table%>%
-#   unnest(data)%>%
-#   ungroup()%>%
-#   group_by(DOM_fil, microbe, category)%>%
-#   filter(sum(category_asin) > 0)%>%
-#   nest()%>%
-#   mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
-#                       broom::tidy()))%>%
-#   dplyr::select(-data)%>%
-#   unnest(corr)%>%
-#   mutate(FDR = p.adjust(p.value, method = "BH"))
+correlation_matrix <- matrix_multiplied_dom%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
+                          "technical_replicates"), sep = "_")%>%
+  select(-c(Experiment, technical_replicates))%>%
+  group_by(Organism, biological_replicates, DOM_fil)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()
+
+correlation_microbe <- otu_stats%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)
+
+correlation_table <- correlation_matrix%>%
+  unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
+  group_by(DOM_fil)%>%
+  nest()%>%
+  mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
+                      gather(microbe, microbe_asin, contains(";"))%>%
+                      gather(category, category_asin, 2:447)))
 
 
+correlation_pvals <- correlation_table%>%
+  unnest(data)%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
 
+write_csv(correlation_pvals, "Analyzed/correlation_analysis.csv")
 
 
 # STATS PERMANOVA - org and unfilfil  ---------------------------------------------------
@@ -414,7 +430,7 @@ matrix_permanova_org <- matrix_multiplied_org%>%
   mutate(mult = mult +1)%>%
   spread(category, mult)%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")
+                          "technical_replicates"), sep = "_")
 
 permanova_org <- matrix_permanova_org%>%
   # column_to_rownames("sample_code")%>%
@@ -427,7 +443,7 @@ matrix_permanova_dom <- matrix_multiplied_dom%>%
   mutate(mult = mult +1)%>%
   spread(category, mult)%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")
+                          "technical_replicates"), sep = "_")
 
 permanova_dom <- matrix_permanova_dom%>%
   # column_to_rownames("sample_code")%>%
@@ -519,7 +535,7 @@ pcoa_org$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")%>%  
+                          "technical_replicates"), sep = "_")%>%  
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
   geom_point(stat = "identity") +
   scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
@@ -542,7 +558,7 @@ pcoa_dom$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates", "transformed"), sep = "_")%>%  
+                          "technical_replicates"), sep = "_")%>%  
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
   geom_point(stat = "identity") +
   scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +

@@ -332,9 +332,18 @@ rf_matrix <- randomForest(Organism ~ ., multi_matrix_random_forest_df,
                           importance = TRUE, proximity = TRUE, nPerm = 10,
                           ntree = 50000, na.action = na.exclude)
 
+top30_org <- (rf_matrix$importance%>% 
+                  as.data.frame()%>%
+                  rownames_to_column("feature")%>%
+                  top_n(30, MeanDecreaseAccuracy))$feature%>%
+  as.vector()
+
+
 rf_matrix_mda_org <- rf_matrix$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")
+  rownames_to_column("feature")%>%
+  mutate(mean_decrease_important = case_when(feature %like any% top30_org ~ "important",
+                                             TRUE ~ "not important"))
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 
@@ -353,9 +362,17 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
                           importance = TRUE, proximity = TRUE,
                           ntree = 50000, na.action=na.exclude)
 
+top30_unfil <- (rf_matrix_UnfilFil$importance%>% 
+                  as.data.frame()%>%
+                  rownames_to_column("feature")%>%
+                  top_n(30, MeanDecreaseAccuracy))$feature%>%
+  as.vector()
+
 rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")
+  rownames_to_column("feature")%>%
+  mutate(mean_decrease_important = case_when(feature %like any% top30_unfil ~ "important",
+                                             TRUE ~ "not important"))
 
 write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.05.csv")
 

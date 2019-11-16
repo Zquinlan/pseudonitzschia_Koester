@@ -377,7 +377,7 @@ mini_quant_dom <- quant_stats%>%
 write_csv(mini_quant_dom, "Analyzed/mini_quant_dom.csv")  
 
 
-# POST-STATS -- Mini Quant Table OTUs -------------------------------------
+# POST-STATS -- Mini RF Table OTUs -------------------------------------
 important_quant_otu <- (otu_rf_mda%>%
                           mutate(feature = gsub("X", "", feature))%>%
                           filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
@@ -719,6 +719,38 @@ write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
 
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
+##Quant all
+pcoa_quant <- quant_stats%>%
+  unite(sample, c("Experiment", "Organism", "biological_replicates", "DOM_fil", "technical_replicates"), sep = "_")%>%
+  spread(feature_number, asin)%>%
+  column_to_rownames("sample")%>%
+  vegdist(na.rm = TRUE)%>%
+  pcoa()
+
+pcoa_quant$values[1:10,]%>%
+  as.data.frame()%>%
+  rownames_to_column("Axis")%>%
+  mutate(axis = as.numeric(Axis))%>%
+  ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
+  geom_bar(stat = "identity") +
+  geom_text(size = 3, color = "red", vjust = -0.5)
+
+## otu
+pcoa_otu <- otu_stats%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)%>%
+  column_to_rownames("sample_name")%>%
+  vegdist(na.rm = TRUE)%>%
+  pcoa()
+
+pcoa_otu$values[1:10,]%>%
+  as.data.frame()%>%
+  rownames_to_column("Axis")%>%
+  mutate(axis = as.numeric(Axis))%>%
+  ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
+  geom_bar(stat = "identity") +
+  geom_text(size = 3, color = "red", vjust = -0.5)
+
 ## Organism Matrix
 pcoa_org <- matrix_multiplied_org%>%
   gather(cat, val, 2:ncol(.))%>%
@@ -755,18 +787,44 @@ pcoa_dom$values[1:10,]%>%
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
 
+#Settings for Pcoas
+pcoa_settings <- function(x) {
+  ggplot(x, aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
+  geom_point(stat = "identity") +
+  scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
+  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+        axis.title.x = element_text(size=14, face="bold"),
+        axis.title.y = element_text(size=14, face="bold"),
+        axis.text.x = element_text(face="bold", size=14),
+        axis.text.y = element_text(face="bold", size=14),
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+        axis.line = element_line(color="black"))
+}
+
+
 ## Plotting PCoAs
-pdf("Plots/PCoA_org_unfilfil_matrix_05.pdf", width = 7, height = 5)  
-pcoa_org$vectors%>%
+pdf("Plots/PCoA_all.pdf", width = 7, height = 5)  
+pcoa_quant$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates"), sep = "_")%>%  
-  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
+                          "technical_replicates"), sep = "_")%>% 
+  pcoa_settings() +
+  ylab(str_c("Axis 2", " (", round(pcoa_quant$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_quant$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  ggtitle("quant all")
+
+pcoa_otu$vectors%>%
+  as.data.frame()%>%
+  rownames_to_column("sample_code")%>%
+  separate(sample_code, c("Organism", "biological_replicates"), sep = "_")%>% 
+  ggplot(aes(Axis.1, Axis.2, color = Organism)) +
   geom_point(stat = "identity") +
   scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
-  ylab(str_c("Axis 2", " (", round(pcoa_org$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
-  xlab(str_c("Axis 1", " (", round(pcoa_org$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         axis.title.x = element_text(size=14, face="bold"),
@@ -778,6 +836,18 @@ pcoa_org$vectors%>%
         legend.background = element_rect(fill = "transparent"), # get rid of legend bg
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
         axis.line = element_line(color="black"))+
+  ylab(str_c("Axis 2", " (", round(pcoa_otu$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_otu$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  ggtitle("otus")
+
+pcoa_org$vectors%>%
+  as.data.frame()%>%
+  rownames_to_column("sample_code")%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+                          "technical_replicates"), sep = "_")%>%  
+  pcoa_settings() +
+  ylab(str_c("Axis 2", " (", round(pcoa_org$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_org$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   ggtitle("Organism 0.05")
 
 pcoa_dom$vectors%>%
@@ -785,22 +855,9 @@ pcoa_dom$vectors%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_")%>%  
-  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
-  geom_point(stat = "identity") +
-  scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
+  pcoa_settings() +
   ylab(str_c("Axis 2", " (", round(pcoa_dom$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
   xlab(str_c("Axis 1", " (", round(pcoa_dom$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
-  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
-        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
-        axis.title.x = element_text(size=14, face="bold"),
-        axis.title.y = element_text(size=14, face="bold"),
-        axis.text.x = element_text(face="bold", size=14),
-        axis.text.y = element_text(face="bold", size=14),
-        panel.grid.major = element_blank(), # get rid of major grid
-        panel.grid.minor = element_blank(), # get rid of minor grid
-        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
-        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
-        axis.line = element_line(color="black"))+
   ggtitle("UnfilFil 0.05")
 dev.off()
 

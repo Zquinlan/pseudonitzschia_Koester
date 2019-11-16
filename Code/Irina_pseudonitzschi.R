@@ -352,17 +352,43 @@ otu_rf_mda <- otu_rf$importance%>%
 write_csv(otu_rf_mda, "Analyzed/Otu_rf_mda.csv")
 
 
-# POST-STATS -- MINI QUANT TABLE TEST ---------------------------------------------------
-important_quant <- (rf_quant_org_mda%>%
+# POST-STATS -- MINI Quant Table organism ---------------------------------------------------
+important_quant_org <- (rf_quant_org_mda%>%
     mutate(feature = gsub("X", "", feature))%>%
     filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
   as.vector()
 
-mini_quant <-quant_stats%>%
-  filter(feature_number %in% important_quant)%>%
+mini_quant_org <-quant_stats%>%
+  filter(feature_number %in% important_quant_org)%>%
   spread(feature_number, asin)
 
-write_csv(mini_quant, "Analyzed/mini_quant.csv")  
+write_csv(mini_quant_org, "Analyzed/mini_quant_org.csv")  
+
+# POST-STATS -- Mini Quant Table unfil ------------------------------------------
+important_quant_dom <- (rf_quant_dom_mda%>%
+                          mutate(feature = gsub("X", "", feature))%>%
+                          filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
+  as.vector()
+
+mini_quant_dom <- quant_stats%>%
+  filter(feature_number %in% important_quant_dom)%>%
+  spread(feature_number, asin)
+
+write_csv(mini_quant_dom, "Analyzed/mini_quant_dom.csv")  
+
+
+# POST-STATS -- Mini Quant Table OTUs -------------------------------------
+important_quant_otu <- (otu_rf_mda%>%
+                          mutate(feature = gsub("X", "", feature))%>%
+                          filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
+  as.vector()
+
+mini_quant_otu <- quant_stats%>%
+  filter(feature_number %in% important_quant_otu)%>%
+  spread(feature_number, asin)
+
+write_csv(mini_quant_otu, "Analyzed/mini_quant_otu.csv")  
+
 
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 rf_sd <- (rf_quant_org_mda%>%
@@ -530,14 +556,14 @@ multi_matrix_random_forest_UnfilFil_df <- multi_matrix_tidy_dom%>%
   spread(category,mult)%>%
   select(c(DOM_fil, 7:ncol(.)))%>%
   mutate(DOM_fil = as.factor(DOM_fil))
- 
+
 names(multi_matrix_random_forest_UnfilFil_df) <- make.names(names(multi_matrix_random_forest_UnfilFil_df))
 
-rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_UnfilFil_df, 
+rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_UnfilFil_df,
                           importance = TRUE, proximity = TRUE,
                           ntree = 50000, na.action=na.exclude)
 
-top30_unfil <- (rf_matrix_UnfilFil$importance%>% 
+top30_unfil <- (rf_matrix_UnfilFil$importance%>%
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
                   top_n(30, MeanDecreaseAccuracy))$feature%>%
@@ -656,6 +682,14 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
 write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 
 
+# POST-STATS -- mini-matrix both org unfilfil important features ----------
+important_all <- c(important_unfil_compounds,important_org_compounds)%>%
+  unique()
+
+mini_matrix_all <- mini_matrix_org%>%
+  left_join(mini_matrix_dom, by = "sample_code")
+
+write_csv(mmini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
 
 # POST STATS -- matrix for HC ---------------------------------------------
 otu_hc <- otu_stats%>%
@@ -790,7 +824,7 @@ ggplot(rf_quant_org_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
   ggtitle("Organism QUANT Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = (top_n(rf_matrix_mda_org, 30, MeanDecreaseAccuracy)%>%
+  geom_hline(yintercept = (top_n(rf_quant_org_mda, 30, MeanDecreaseAccuracy)%>%
                              arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
              col = "red") +
   mda_theme
@@ -800,7 +834,17 @@ ggplot(rf_quant_dom_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
   ggtitle("DOM Quant Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = (top_n(rf_matrix_mda_org, 30, MeanDecreaseAccuracy)%>%
+  geom_hline(yintercept = (top_n(rf_quant_dom_mda, 30, MeanDecreaseAccuracy)%>%
+                             arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
+             col = "red") +
+  mda_theme
+
+ggplot(otu_rf_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
+  geom_point(stat = "identity") +
+  ggtitle("DOM Quant Mean Decrease Accuracy pval = 0.05") +
+  xlab("Features (decreasing mda)") +
+  ylab("Mean Decrease Accuracy") +
+  geom_hline(yintercept = (top_n(otu_rf_mda, 30, MeanDecreaseAccuracy)%>%
                              arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
              col = "red") +
   mda_theme

@@ -246,6 +246,14 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   as.vector()
 
 # STATS RANDOM FOREST -- QUANT Organism ----------------------------------------------
+rf_mda_fun <- function(x,y) {
+  names(x) <- make.names(names(x))
+  
+  rf <- randomForest(y ~ ., x, 
+                     importance = TRUE, proximity = TRUE, nPerm = 10,
+                     ntree = 50000, na.action = na.exclude)
+}
+
 quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% aov_organism_sigs)%>%
   mutate(asin = as.numeric(asin))%>%

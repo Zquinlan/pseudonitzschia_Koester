@@ -669,6 +669,7 @@ write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
 important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
                               mutate(feature = gsub("X", "", feature))%>%
                                 top_n(30, MeanDecreaseAccuracy))$feature%>%
+  unique()%>%
   as.vector()
 
 mini_matrix_dom <- matrix_multiplied_dom%>%
@@ -896,7 +897,7 @@ ggplot(rf_quant_dom_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
 
 ggplot(otu_rf_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("DOM Quant Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("OTU Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
   geom_hline(yintercept = (top_n(otu_rf_mda, 30, MeanDecreaseAccuracy)%>%

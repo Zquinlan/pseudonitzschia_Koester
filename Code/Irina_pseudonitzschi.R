@@ -682,9 +682,6 @@ write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 
 
 # POST-STATS -- mini-matrix both org unfilfil important features ----------
-important_all <- c(important_unfil_compounds,important_org_compounds)%>%
-  unique()
-
 mini_matrix_all <- mini_matrix_org%>%
   left_join(mini_matrix_dom, by = "sample_code")
 

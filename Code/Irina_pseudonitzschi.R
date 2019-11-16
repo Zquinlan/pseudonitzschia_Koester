@@ -365,8 +365,13 @@ mini_quant <-quant_stats%>%
 write_csv(mini_quant, "Analyzed/mini_quant.csv")  
 
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
+rf_sd <- (rf_quant_org_mda%>%
+            filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy))%>%
+            mutate(feature = gsub("X", "", feature)))$feature%>%
+  as.vector()
+
 cat_clean_org <- cat_stats%>%
-  filter(FeatureID %in% aov_organism_sigs)%>%
+  filter(FeatureID %in% rf_sd)%>%
   column_to_rownames("FeatureID")%>%
   data.matrix(rownames.force = NA)
 

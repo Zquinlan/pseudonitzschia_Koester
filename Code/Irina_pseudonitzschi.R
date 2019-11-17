@@ -246,8 +246,6 @@ aov_all_sigs <- (aov_pvalues)$feature_number%>%
   as.vector()
 
 # STATS RANDOM FOREST -- QUANT Organism ----------------------------------------------
-test <- rf_mda_fun(quant_org_rf_prep, quant_org_rf_prep$Organism)
-
 quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% aov_organism_sigs)%>%
   mutate(asin = as.numeric(asin))%>%
@@ -685,7 +683,7 @@ write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
 mini_matrix_all <- mini_matrix_org%>%
   left_join(mini_matrix_dom, by = "sample_code")
 
-write_csv(mmini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
+write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
 
 # POST STATS -- matrix for HC ---------------------------------------------
 otu_hc <- otu_stats%>%

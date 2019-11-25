@@ -520,7 +520,7 @@ rf_matrix <- randomForest(Organism ~ ., multi_matrix_random_forest_df,
 top30_org <- (rf_matrix$importance%>% 
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
-                  top_n(30, MeanDecreaseAccuracy))$feature%>%
+                  top_n(10, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 
@@ -529,20 +529,20 @@ rf_matrix_mda_org <- rf_matrix$importance%>%
   rownames_to_column("feature")%>%
   mutate(mean_decrease_important = case_when(feature %like any% top30_org ~ "important",
                                              TRUE ~ "not important"),
-         multiseries_important = case_when(multiseries >= (top_n(., 30, multiseries)%>%
-                                                             arrange(-multiseries))$multiseries[30]~ "important",
+         multiseries_important = case_when(multiseries >= (top_n(., 10, multiseries)%>%
+                                                             arrange(-multiseries))$multiseries[10]~ "important",
                                            TRUE ~ "not important"),
-         delicatissima_important = case_when(delicatissima >= (top_n(., 30, delicatissima)%>%
-                                                             arrange(-delicatissima))$delicatissima[30]~ "important",
+         delicatissima_important = case_when(delicatissima >= (top_n(., 10, delicatissima)%>%
+                                                             arrange(-delicatissima))$delicatissima[10]~ "important",
                                            TRUE ~ "not important"),
-         galaxiae_important = case_when(galaxiae >= (top_n(., 30, galaxiae)%>%
-                                                             arrange(-galaxiae))$galaxiae[30]~ "important",
+         galaxiae_important = case_when(galaxiae >= (top_n(., 10, galaxiae)%>%
+                                                             arrange(-galaxiae))$galaxiae[10]~ "important",
                                            TRUE ~ "not important"),
-         hasleana_important = case_when(hasleana >= (top_n(., 30, hasleana)%>%
-                                                             arrange(-hasleana))$hasleana[30]~ "important",
+         hasleana_important = case_when(hasleana >= (top_n(., 10, hasleana)%>%
+                                                             arrange(-hasleana))$hasleana[10]~ "important",
                                            TRUE ~ "not important"),
-         subpacifica_important = case_when(subpacifica >= (top_n(., 30, subpacifica)%>%
-                                                          arrange(-subpacifica))$subpacifica[30]~ "important",
+         subpacifica_important = case_when(subpacifica >= (top_n(., 10, subpacifica)%>%
+                                                          arrange(-subpacifica))$subpacifica[10]~ "important",
                                            TRUE ~ "not important"))
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
@@ -566,14 +566,20 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
 top30_unfil <- (rf_matrix_UnfilFil$importance%>%
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
-                  top_n(30, MeanDecreaseAccuracy))$feature%>%
+                  top_n(15, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
   as.data.frame()%>%
   rownames_to_column("feature")%>%
   mutate(mean_decrease_important = case_when(feature %like any% top30_unfil ~ "important",
-                                             TRUE ~ "not important"))
+                                             TRUE ~ "not important"),
+         dom_mda_important = case_when(DOM >= (top_n(., 15, DOM)%>%
+                                                   arrange(-DOM))$DOM[15]~ "important",
+                                       TRUE ~ "not important"),
+         filt_mda_important = case_when(Unfil >= (top_n(., 15, Unfil)%>%
+                                                 arrange(-Unfil))$Unfil[15]~ "important",
+                                       TRUE ~ "not important"))
 
 write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.05.csv")
 

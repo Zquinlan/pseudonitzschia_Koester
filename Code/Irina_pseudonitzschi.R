@@ -664,6 +664,7 @@ important_org_compounds <- (rf_matrix_mda_org%>%
 mini_matrix_org <- matrix_multiplied_org%>%
   gather(feature, val, 2:ncol(.))%>%
   mutate(feature = gsub("[[:space:]]", ".", feature))%>%
+  mutate(feature = gsub("-", ".", feature))%>%
   filter(feature %in% important_org_compounds)%>%
   spread(feature, val)
 

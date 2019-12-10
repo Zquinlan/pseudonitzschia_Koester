@@ -725,8 +725,21 @@ hc_matrix <- mini_matrix_org%>%
   left_join(otu_hc, by = "sample_code")
   
   
-write_csv(hc_matrix, "Analyzed/hc_chemicals.csv")
+write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
 
+
+# VISUALIZATION -- hc for quant features ----------------------------------
+quant_hc <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
+  filter(feature_number %in% canopus_available_features_org)%>%
+  unite(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+                   "technical_replicates"), sep = "_")%>%
+  group_by(feature_number)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  select(-asin)%>%
+  spread(feature_number, zscore)
+
+write_csv(quant_hc, "Analyzed/hc_features.csv")
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all

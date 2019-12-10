@@ -693,7 +693,9 @@ write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
 
 # POST STATS -- matrix for HC ---------------------------------------------
 otu_hc <- otu_stats%>%
+  group_by(Taxonomy)%>%
   mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
   select(-c(reads, ra, asin))%>%
   spread(Taxonomy, zscore)%>%
   rename("sample_code" = "sample_name")
@@ -703,6 +705,14 @@ hc_matrix <- mini_matrix_org%>%
   separate(sample_code, c("Experiment", "Organism",
                           "biological_replicate", "DOM_fil",
                           "technical_replicate"), sep = "_")%>%
+  group_by(category)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  # filter(DOM_fil == "DOM")%>%
+  # select(-c(asin, DOM_fil, Experiment))%>%
+  # unite(sample_code, c("Organism", "biological_replicate", "technical_replicate"), sep = "_")%>%
+  # spread(category, zscore)
+  
   group_by(category, Organism, biological_replicate, DOM_fil)%>%
   select(-technical_replicate)%>%
   summarize_if(is.numeric, mean)%>%
@@ -715,7 +725,7 @@ hc_matrix <- mini_matrix_org%>%
   left_join(otu_hc, by = "sample_code")
   
   
-write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
+write_csv(hc_matrix, "Analyzed/hc_chemicals.csv")
 
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------

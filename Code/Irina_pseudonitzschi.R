@@ -127,6 +127,20 @@ otu_stats <- otu_clean%>%
   filter(sum(asin) != 0)%>%
   ungroup()
 
+family_stats <- otu_clean%>%
+  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  select(-c("Genus", "otu_number"))%>%
+  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
+  group_by(sample_name,Taxonomy)%>%
+  summarize_if(is.numeric, sum)%>%
+  ungroup()%>%
+  group_by(sample_name)%>%
+  mutate(ra = reads/sum(reads),
+         asin = asin(sqrt(ra)))%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()
+
 # STATS -- SET SEED -------------------------------------------------------
 set.seed(295034) # Setting the seed before we do any stats
 

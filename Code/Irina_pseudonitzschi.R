@@ -79,11 +79,11 @@ cat_stats <- cat_df%>%
 # CLEANING -- OTU table -------------------------------------------------------------------
 otu_clean <- otu_df%>%
   select(-c(1:2))%>%
-  gather(sample_code, reads, 2:ncol(.))%>%
+  rownames_to_column("otu_number")%>%
+  gather(sample_code, reads, 3:ncol(.))%>%
   left_join(otu_samples, ., by = "sample_code")%>%
   separate(sample_name, c("Experiment", "Organism", "biological_replicate"), sep = "_")%>%
   unite(sample_name, c("Organism", "biological_replicate"), sep = "_")%>%
-  select(-c(sample_code, Experiment))%>%
   separate(taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
   mutate(Class = case_when(Class %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
                            TRUE ~ as.character(Class)),
@@ -114,41 +114,18 @@ otu_clean <- otu_df%>%
          OTU = case_when(Genus == "unclassified" ~ "",
                          OTU %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "sp",
                          TRUE ~ as.character(OTU)))%>%
-  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
-  group_by(sample_name, Taxonomy)%>%
-  summarize_if(is.numeric, sum)%>%
-  ungroup()%>%
-  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")
+  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  select(-c(OTU, Experiment, sample_code))
 
 # PRE-STATS -- OTU TABLE --------------------------------------------------
 ## Making the stats dataframes for OTU, family and classes
 otu_stats <- otu_clean%>%
-  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
   group_by(sample_name)%>%
   mutate(ra = reads/sum(reads),
-         asin = asin(sqrt(ra)))
-
-
-family_stats <- otu_clean%>%
-  select(-c(Genus, OTU))%>%
-  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
-  group_by(sample_name, Taxonomy)%>%
-  summarize_if(is.numeric, sum)%>%
-  ungroup()%>%
-  group_by(sample_name)%>%
-  mutate(ra = reads/sum(reads),
-         asin = asin(sqrt(ra)))
-
-class_stats <- otu_clean%>%
-  select(-c(Order, Family, Genus, OTU))%>%
-  unite(Taxonomy, c("Kingdom", "Phylum", "Class"), sep = ";")%>%
-  group_by(sample_name, Taxonomy)%>%
-  summarize_if(is.numeric, sum)%>%
-  ungroup()%>%
-  group_by(sample_name)%>%
-  mutate(ra = reads/sum(reads),
-         asin = asin(sqrt(ra)))  
-
+         asin = asin(sqrt(ra)))%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()
 
 # STATS -- SET SEED -------------------------------------------------------
 set.seed(295034) # Setting the seed before we do any stats
@@ -157,6 +134,7 @@ set.seed(295034) # Setting the seed before we do any stats
 # STATS ANOVA -- OTUs One-way -----------------------------------------------------
 otu_aov <- otu_stats%>%
   separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  mutate(Organism = as.factor(Organism))%>%
   group_by(Taxonomy)%>%
   nest()%>%
   mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
@@ -167,54 +145,6 @@ otu_aov <- otu_stats%>%
   mutate(FDR = p.adjust(p.value, method = "BH"))%>%
   filter(FDR < 0.05)
 
-family_aov <- family_stats%>%
-  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
-  group_by(Taxonomy)%>%
-  nest()%>%
-  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
-                      tidy()))%>%
-  unnest(data)%>%
-  ungroup()%>%
-  filter(term != "Residuals")%>%
-  mutate(FDR = p.adjust(p.value, method = "BH"))%>%
-  filter(FDR < 0.05)
-
-class_aov <- class_stats%>%
-  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
-  group_by(Taxonomy)%>%
-  nest()%>%
-  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
-                      tidy()))%>%
-  unnest(data)%>%
-  ungroup()%>%
-  filter(term != "Residuals")%>%
-  mutate(FDR = p.adjust(p.value, method = "BH"))%>%
-  filter(FDR < 0.05)
-
-
-# STATS TUKEY -- Family -----------------------------------------------------
-family_tukey <- family_stats%>%
-  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
-  group_by(Taxonomy)%>%
-  nest()%>%
-  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
-                      TukeyHSD(p.adjust.methods = "BH")%>%
-                      tidy()))%>%
-  unnest(data)%>%
-  filter(adj.p.value < 0.05)
-
-class_tukey <- class_stats%>%
-  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
-  group_by(Taxonomy)%>%
-  nest()%>%
-  mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
-                      TukeyHSD(p.adjust.methods = "BH")%>%
-                      tidy()))%>%
-  unnest(data)%>%
-  filter(adj.p.value < 0.05)
-
-write_csv(family_tukey, "Analyzed/family_tukey.csv")
-write_csv(class_tukey, "Analyzed/class_tukey.csv")
 
 # STATS ANOVA -- Quant Two-way -------------------------------------------------------------------
 aov_pvalues <- quant_stats%>%
@@ -587,44 +517,6 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
   geom_point(stat = "identity")
 
 
-# STATS Correlation analysis ----------------------------------------------
-## Correlation analysis
-## Doing this between OTU and multiplied matrix
-correlation_matrix <- matrix_multiplied_org%>%
-  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
-                          "technical_replicates"), sep = "_")%>%
-  select(-c(Experiment, technical_replicates))%>%
-  group_by(Organism, biological_replicates, DOM_fil)%>%
-  summarize_if(is.numeric, mean)%>%
-  ungroup()
-
-correlation_microbe <- otu_stats%>%
-  select(-c(reads, ra))%>%
-  spread(Taxonomy, asin)
-
-correlation_table <- correlation_matrix%>%
-  unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
-  group_by(DOM_fil)%>%
-  nest()%>%
-  mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
-                      gather(microbe, microbe_asin, contains(";"))%>%
-                      gather(category, category_asin, 2:447)))
-
-
-correlation_pvals <- correlation_table%>%
-  unnest(data)%>%
-  ungroup()%>%
-  group_by(DOM_fil, microbe, category)%>%
-  filter(sum(category_asin) > 0)%>%
-  nest()%>%
-  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
-                      broom::tidy()))%>%
-  dplyr::select(-data)%>%
-  unnest(corr)%>%
-  mutate(FDR = p.adjust(p.value, method = "BH"))
-
-write_csv(correlation_pvals, "Analyzed/correlation_analysis.csv")
-
 
 # STATS PERMANOVA - org and unfilfil  ---------------------------------------------------
 matrix_permanova_org <- matrix_multiplied_org%>%
@@ -669,6 +561,51 @@ mini_matrix_org <- matrix_multiplied_org%>%
   spread(feature, val)
 
 write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
+
+# STATS Correlation analysis ----------------------------------------------
+## Correlation analysis
+## Doing this between OTU and multiplied matrix
+correlation_matrix <- matrix_multiplied_org%>%
+  gather(compound, val, 2:ncol(.))%>%
+  mutate(compound = gsub("[[:space:]]", ".", compound))%>%
+  mutate(compound = gsub("-", ".", compound))%>%
+  filter(compound %in% important_org_compounds)%>%
+  spread(compound, val)%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
+                          "technical_replicates"), sep = "_")%>%
+  select(-c(Experiment, technical_replicates))%>%
+  group_by(Organism, biological_replicates, DOM_fil)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()
+
+correlation_microbe <- otu_stats%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)
+
+correlation_table <- correlation_matrix%>%
+  unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
+  group_by(DOM_fil)%>%
+  nest()%>%
+  mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
+                      gather(microbe, microbe_asin, contains(";"))%>%
+                      gather(category, category_asin, 2:31)))
+
+
+correlation_pvals <- correlation_table%>%
+  unnest(data)%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  ungroup()%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
+
+write_csv(correlation_pvals, "Analyzed/correlation_analysis.csv")
+
 
 # POST-STATS -- mini-matrix unfilfil -----------------------------------------------
 important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
@@ -905,8 +842,7 @@ ggplot(rf_quant_org_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
   ggtitle("Organism QUANT Mean Decrease Accuracy pval = 0.05") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = (top_n(rf_quant_org_mda, 30, MeanDecreaseAccuracy)%>%
-                             arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
+  geom_hline(yintercept = (mean(rf_quant_org_mda$MeanDecreaseAccuracy + sd(rf_quant_org_mda$MeanDecreaseAccuracy))),
              col = "red") +
   mda_theme
 

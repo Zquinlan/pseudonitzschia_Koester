@@ -660,11 +660,6 @@ hc_matrix <- mini_matrix_org%>%
   group_by(category)%>%
   mutate(zscore = (asin - mean(asin))/sd(asin))%>%
   ungroup()%>%
-  # filter(DOM_fil == "DOM")%>%
-  # select(-c(asin, DOM_fil, Experiment))%>%
-  # unite(sample_code, c("Organism", "biological_replicate", "technical_replicate"), sep = "_")%>%
-  # spread(category, zscore)
-  
   group_by(category, Organism, biological_replicate, DOM_fil)%>%
   select(-technical_replicate)%>%
   summarize_if(is.numeric, mean)%>%

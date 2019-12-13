@@ -293,6 +293,12 @@ otu_rf_mda <- otu_rf$importance%>%
                                                              arrange(-subpacifica))$subpacifica[30]~ "important",
                                            TRUE ~ "not important"))
 
+important_org_otu <- (otu_rf_mda%>%
+                        mutate(feature = gsub("\\.", ";", feature))%>%
+                        top_n(30, MeanDecreaseAccuracy))$feature%>%
+  unique()%>%
+  as.vector()
+
 write_csv(otu_rf_mda, "Analyzed/Otu_rf_mda.csv")
 
 
@@ -645,6 +651,7 @@ write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
 
 # POST STATS -- matrix for HC ---------------------------------------------
 otu_hc <- otu_stats%>%
+  filter(Taxonomy %in% important_org_otu)%>%
   group_by(Taxonomy)%>%
   mutate(zscore = (asin - mean(asin))/sd(asin))%>%
   ungroup()%>%
@@ -664,7 +671,6 @@ hc_matrix <- mini_matrix_org%>%
   select(-technical_replicate)%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
-  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
   filter(DOM_fil == "DOM")%>%
   select(-c(asin, DOM_fil))%>%
   unite(sample_code, c("Organism", "biological_replicate"), sep = "_")%>%
@@ -673,7 +679,6 @@ hc_matrix <- mini_matrix_org%>%
   
   
 write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
-
 
 # VISUALIZATION -- hc for quant features ----------------------------------
 quant_hc <- quant_stats%>%  ## Okay so here we are first making the data "tidy"

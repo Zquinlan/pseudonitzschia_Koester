@@ -766,7 +766,8 @@ pcoa_dom$values[1:10,]%>%
 pcoa_settings <- function(x) {
   ggplot(x, aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
   geom_point(stat = "identity") +
-  scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
+    scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
+    scale_shape_manual(values=c(1, 16))+
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         axis.title.x = element_text(size=14, face="bold"),
@@ -799,7 +800,7 @@ pcoa_otu$vectors%>%
   separate(sample_code, c("Organism", "biological_replicates"), sep = "_")%>% 
   ggplot(aes(Axis.1, Axis.2, color = Organism)) +
   geom_point(stat = "identity") +
-  scale_color_manual(values = wes_palette("Darjeeling1", n = 5)) +
+  scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         axis.title.x = element_text(size=14, face="bold"),

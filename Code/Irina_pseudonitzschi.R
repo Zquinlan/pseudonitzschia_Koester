@@ -599,8 +599,6 @@ feature_info_test <- feature_info%>%
   ungroup()%>%
   mutate(p_value = as.numeric(p_value),
          FDR = p.adjust(p_value, method = "BH"))
-  
-  
 
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis

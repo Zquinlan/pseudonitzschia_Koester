@@ -585,7 +585,7 @@ mini_matrix_org <- matrix_multiplied_org%>%
 
 write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_org.csv")
 
-# STATS - T-TEST Important features ---------------------------------------
+# STATS - T-TEST Important features org ---------------------------------------
 feature_info_test <- feature_info%>%
   gather(variable, response, 2:ncol(.))%>%
   mutate(importance = case_when(feature_number %in% important_quant_org ~ "important",
@@ -593,12 +593,32 @@ feature_info_test <- feature_info%>%
          importance = as.factor(importance))%>%
   group_by(variable)%>%
   nest()%>%
-  mutate(data = map(data, ~ t.test(.x$response ~ .x$importance, alternative = "two.sided")),
+  mutate(data = map(data, ~ t.test(.x$response ~ .x$importance, alternative = "greater")),
                     p_value = map(data, ~ .x["p.value"][[1]]))%>%
   select(-data)%>%
   ungroup()%>%
   mutate(p_value = as.numeric(p_value),
          FDR = p.adjust(p_value, method = "BH"))
+
+write_csv(feature_info_test, "Analyzed/Ttest_elements_org.csv")
+
+# STATS - T-TEST Important features DOM ---------------------------------------
+feature_info_test_dom <- feature_info%>%
+  gather(variable, response, 2:ncol(.))%>%
+  mutate(importance = case_when(feature_number %in% important_quant_dom ~ "important",
+                                TRUE ~ "not"),
+         importance = as.factor(importance))%>%
+  group_by(variable)%>%
+  nest()%>%
+  mutate(data = map(data, ~ t.test(.x$response ~ .x$importance, alternative = "greater")),
+         p_value = map(data, ~ .x["p.value"][[1]]))%>%
+  select(-data)%>%
+  ungroup()%>%
+  mutate(p_value = as.numeric(p_value),
+         FDR = p.adjust(p_value, method = "BH"))
+
+write_csv(feature_info_test_dom, "Analyzed/Ttest_elements_dom.csv")
+
 
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis

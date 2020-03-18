@@ -119,14 +119,16 @@ quant_df <- quant_blanks_env%>%
 ## Cleaning all of the data
 quant_stats <- quant_df%>%
   gather(sample_code_ms, xic, 2:ncol(.))%>%
+  mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
   left_join(sample_rename, by = "sample_code_ms")%>%
   select(-sample_code_ms)%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
-                          "technical_replicates"), sep = "_")%>%
+                          "technical_replicates"), sep = "_", remove = FALSE)%>%
   filter(Experiment == "Exp2")%>%
-  unite(sample_code, c("Experiment", "Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
-  left_join(chl, by = "sample_code")%>%
+  unite(sample_code, c("Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
+  left_join(chl%>%
+              mutate(sample_code = gsub("Pn_", "Pn-", sample_code)), by = "sample_code")%>%
   select(-sample_code)%>%
   unite(sample_code, c("Experiment", "Organism", 
                       "biological_replicates", "DOM_fil", 

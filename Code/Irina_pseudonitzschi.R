@@ -65,6 +65,10 @@ quant_raw <- read_csv("./Raw/quant_all.csv")%>%
   select(-c(2:3))%>%
   rename(feature_number = 1)
 
+sample_rename <- read_csv("./Raw/sample_renames.csv")%>%
+  rename(sample_code_ms = ID_MS,
+         sample_code = ID_new)
+
 metadata_quant <- read_tsv("./Raw/metadata_table.tsv")%>%
   mutate(filename = gsub("mzXML", "mzML", filename))
 
@@ -85,7 +89,8 @@ otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
 
 # CLEANING -- Removing Blanks ---------------------------------------------
 culture_blanks <- (metadata_quant%>%
-                     filter(SampleType == "blank_culturemedia"))$filename%>%
+                     filter(SampleType == "blank_culturemedia",
+                            filename != "Media_Blank_100mL.mzML"))$filename%>%
   as.vector()
 
 culture_samples <- (metadata_quant%>%
@@ -113,10 +118,13 @@ quant_df <- quant_blanks_env%>%
 # CLEANING -- Stats dataframes --------------------------------------------------------------------------------
 ## Cleaning all of the data
 quant_stats <- quant_df%>%
-  gather(sample_code, xic, 2:ncol(.))%>%
+  gather(sample_code_ms, xic, 2:ncol(.))%>%
+  left_join(sample_rename, by = "sample_code_ms")%>%
+  select(-sample_code_ms)%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_")%>%
+  filter(Experiment != "Exp1")%>%
   unite(sample_code, c("Experiment", "Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
   left_join(chl, by = "sample_code")%>%
   select(-sample_code)%>%
@@ -128,7 +136,6 @@ quant_stats <- quant_df%>%
          chl_norm = ra/chl,
          asin = asin(sqrt(chl_norm)))%>%
   ungroup()%>%
-  rename("feature_number" = "SampleID")%>%
   select(-c(ra, xic,  chl_norm, chl))%>%
   # group_by(feature_number)%>%
   # filter(sum(.$asin) != 0)%>%

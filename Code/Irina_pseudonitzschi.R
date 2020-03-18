@@ -124,7 +124,7 @@ quant_stats <- quant_df%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_")%>%
-  filter(Experiment != "Exp1")%>%
+  filter(Experiment == "Exp2")%>%
   unite(sample_code, c("Experiment", "Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
   left_join(chl, by = "sample_code")%>%
   select(-sample_code)%>%

@@ -22,6 +22,38 @@ library(ape)
 library(wesanderson)
 library(RColorBrewer)
 
+
+# LOADING -- Functions ----------------------------------------------------
+flag_background <- function(data, 
+                            min_val = 0.5, 
+                            blank_columns = match(names(select(data, contains("blank", ignore.case = TRUE))), names(data)), 
+                            sample_columns = match(names(select(data,-c(contains("blank", ignore.case = TRUE),"feature_number"))), 
+                                                   names(data))) 
+{
+  require("tidyverse")
+  data$max_blanks <- apply(data[blank_columns], 1, max)
+  data$mean_samples <- apply(data[sample_columns], 1, mean, na.rm = TRUE)
+  
+  no_background <- data%>%
+    mutate(background_features = case_when(mean_samples*min_val > max_blanks ~ "real",
+                                           TRUE ~ "background"))%>%
+    dplyr::select(-c(max_blanks, mean_samples))
+}
+
+flag_transient <- function(data, 
+                           sample_columns = match(names(select(data, -contains("blank", ignore.case = TRUE))), names(data)), 
+                           noise_level = 2E5, 
+                           replication_number = 3) 
+{
+  require("tidyverse")
+  no_transient <- data%>%
+    add_column(samples_over_noise = rowSums(.[sample_columns] > noise_level), .before = 2)%>%
+    mutate(transient_features = case_when(samples_over_noise >= replication_number ~ "real",
+                                          TRUE ~ "transient"))%>%
+    dplyr::select(-samples_over_noise)
+}
+
+
 map <- purrr::map
 select <- dplyr::select
 
@@ -29,17 +61,54 @@ tidy <- broom::tidy
 rename <- dplyr::rename
 
 # LOADING -- Dataframes ---------------------------------------------------
-quant_df <- read_csv("./Raw/Pn_Ex2_MASTERx_quant_raw.csv")
+quant_raw <- read_csv("./Raw/quant_all.csv")%>%
+  select(-c(2:3))%>%
+  rename(feature_number = 1)
+
+metadata_quant <- read_tsv("./Raw/metadata_table.tsv")%>%
+  mutate(filename = gsub("mzXML", "mzML", filename))
+
 cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
+
 chl <- read_xlsx("Raw/Pn_Ex2_Chlorophyll.xlsx")
+
 feature_info <- read_csv("./Raw/Pn_Ex2_MASTERx_elements.csv")%>%
-  rename(feature_number = 1)%>%
+  rename(feature_number = 1)
   select(feature_number, everything())
 
 otu_df <- read_tsv("./Raw/Irina_2018_16s_exp_GEL.swarm.tax")
+
 otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
   rename("sample_name" = "SampleID")%>%
   rename("sample_code" = "OTU_name")
+
+
+# CLEANING -- Removing Blanks ---------------------------------------------
+culture_blanks <- (metadata_quant%>%
+                     filter(SampleType == "blank_culturemedia"))$filename%>%
+  as.vector()
+
+culture_samples <- (metadata_quant%>%
+                     filter(SampleType == "culture_multiplespecies"))$filename%>%
+  as.vector()
+
+quant_blanks_env <- quant_raw%>%
+  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML)), names(.)))%>%
+  filter(background_features == "real")%>%
+  select(-background_features)
+
+quant_culture_blanks_removed <- quant_blanks_env%>%
+  select(c(feature_number, culture_blanks, culture_samples))%>%
+  flag_background(blank_columns = match(names(select(., culture_blanks)), names(.)))%>%
+  filter(background_features == "real")%>%
+  select(-background_features)
+  
+quant_df <- quant_blanks_env%>%
+  select(-c(culture_blanks, culture_samples))%>%
+  full_join(quant_culture_blanks_removed, by = "feature_number")%>%
+  flag_transient()%>%
+  filter(transient_features == "real")%>%
+  select(-transient_features)
 
 # CLEANING -- Stats dataframes --------------------------------------------------------------------------------
 ## Cleaning all of the data
@@ -837,7 +906,7 @@ pcoa_otu$vectors%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Organism", "biological_replicates"), sep = "_")%>% 
   ggplot(aes(Axis.1, Axis.2, color = Organism)) +
-  geom_point(stat = "identity") +
+  geom_point(stat = "identity", aes(size = 0.2)) +
   scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot

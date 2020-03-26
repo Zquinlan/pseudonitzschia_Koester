@@ -65,11 +65,11 @@ quant_raw <- read_csv("./Raw/quant_all.csv")%>%
   select(-c(2:3))%>%
   rename(feature_number = 1)
 
-sample_rename <- read_csv("./Raw/sample_renames.csv")%>%
+sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
   rename(sample_code_ms = ID_MS,
          sample_code = ID_new)
 
-metadata_quant <- read_tsv("./Raw/metadata_table.tsv")%>%
+metadata_quant <- read_tsv("./Raw/Pn_metadata_table.tsv")%>%
   mutate(filename = gsub("mzXML", "mzML", filename))
 
 cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
@@ -88,17 +88,21 @@ otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
 
 
 # CLEANING -- Removing Blanks ---------------------------------------------
+field_blanks <- (metadata_quant%>%
+                      filter(SampleType == "blank_extraction"))$filename%>%
+  as.vector()
+
 culture_blanks <- (metadata_quant%>%
                      filter(SampleType == "blank_culturemedia",
                             filename != "Media_Blank_100mL.mzML"))$filename%>%
   as.vector()
 
 culture_samples <- (metadata_quant%>%
-                     filter(SampleType == "culture_multiplespecies"))$filename%>%
+                     filter(ATTRIBUTE_Experiment == "Exp2_Culture"))$filename%>%
   as.vector()
 
 quant_blanks_env <- quant_raw%>%
-  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML)), names(.)))%>%
+  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML)), names(.)))%>%
   filter(background_features == "real")%>%
   select(-background_features)
 

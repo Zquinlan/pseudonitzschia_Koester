@@ -77,7 +77,7 @@ cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
 chl <- read_xlsx("Raw/Pn_Ex2_Chlorophyll.xlsx")
 
 feature_info <- read_csv("./Raw/Pn_Ex2_MASTERx_elements.csv")%>%
-  rename(feature_number = 1)
+  rename(feature_number = 1)%>%
   select(feature_number, everything())
 
 otu_df <- read_tsv("./Raw/Irina_2018_16s_exp_GEL.swarm.tax")
@@ -124,7 +124,8 @@ quant_df <- quant_blanks_env%>%
 quant_stats <- quant_df%>%
   gather(sample_code_ms, xic, 2:ncol(.))%>%
   mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
-  left_join(sample_rename, by = "sample_code_ms")%>%
+  left_join(sample_rename%>%
+              select(-c(ID_16S, ID_16S_new)), by = "sample_code_ms")%>%
   select(-sample_code_ms)%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
@@ -134,6 +135,7 @@ quant_stats <- quant_df%>%
   left_join(chl%>%
               mutate(sample_code = gsub("Pn_", "Pn-", sample_code)), by = "sample_code")%>%
   select(-sample_code)%>%
+  filter(Organism != 'MediaBlank')%>%
   unite(sample_code, c("Experiment", "Organism", 
                       "biological_replicates", "DOM_fil", 
                       "technical_replicates"), sep = "_")%>%

@@ -296,20 +296,20 @@ rf_quant_org_mda <- quant_rf_org$importance%>%
   mutate(mean_decrease_important = case_when(MeanDecreaseAccuracy >= (top_n(., 30, MeanDecreaseAccuracy)%>%
                                                                arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30]~ "important",
                                              TRUE ~ "not important"),
-         multiseries_important = case_when(multiseries >= (top_n(., 30, multiseries)%>%
-                                                             arrange(-multiseries))$multiseries[30]~ "important",
+         multiseries_important = case_when(`Pn-multiseries` >= (top_n(., 30, `Pn-multiseries`)%>%
+                                                             arrange(-`Pn-multiseries`))$`Pn-multiseries`[30]~ "important",
                                            TRUE ~ "not important"),
-         delicatissima_important = case_when(delicatissima >= (top_n(., 30, delicatissima)%>%
-                                                                 arrange(-delicatissima))$delicatissima[30]~ "important",
+         delicatissima_important = case_when(`Pn-delicatissima` >= (top_n(., 30, `Pn-delicatissima`)%>%
+                                                                 arrange(-`Pn-delicatissima`))$`Pn-delicatissima`[30]~ "important",
                                              TRUE ~ "not important"),
-         galaxiae_important = case_when(galaxiae >= (top_n(., 30, galaxiae)%>%
-                                                       arrange(-galaxiae))$galaxiae[30]~ "important",
+         galaxiae_important = case_when(`Pn-galaxiae` >= (top_n(., 30, `Pn-galaxiae`)%>%
+                                                       arrange(-`Pn-galaxiae`))$`Pn-galaxiae`[30]~ "important",
                                         TRUE ~ "not important"),
-         hasleana_important = case_when(hasleana >= (top_n(., 30, hasleana)%>%
-                                                       arrange(-hasleana))$hasleana[30]~ "important",
+         hasleana_important = case_when(`Pn-hasleana` >= (top_n(., 30, `Pn-hasleana`)%>%
+                                                       arrange(-`Pn-hasleana`))$`Pn-hasleana`[30]~ "important",
                                         TRUE ~ "not important"),
-         subpacifica_important = case_when(subpacifica >= (top_n(., 30, subpacifica)%>%
-                                                             arrange(-subpacifica))$subpacifica[30]~ "important",
+         subpacifica_important = case_when(`Pn-subpacifica` >= (top_n(., 30, `Pn-subpacifica`)%>%
+                                                             arrange(-`Pn-subpacifica`))$`Pn-subpacifica`[30]~ "important",
                                            TRUE ~ "not important"))
 
 write_csv(rf_quant_org_mda, "Analyzed/RF_quant_organism.csv")
@@ -566,20 +566,20 @@ rf_matrix_mda_org <- rf_matrix$importance%>%
   rownames_to_column("feature")%>%
   mutate(mean_decrease_important = case_when(feature %like any% top30_org ~ "important",
                                              TRUE ~ "not important"),
-         multiseries_important = case_when(multiseries >= (top_n(., 10, multiseries)%>%
-                                                             arrange(-multiseries))$multiseries[10]~ "important",
+         multiseries_important = case_when(`Pn-multiseries` >= (top_n(., 10, `Pn-multiseries`)%>%
+                                                             arrange(-`Pn-multiseries`))$`Pn-multiseries`[10]~ "important",
                                            TRUE ~ "not important"),
-         delicatissima_important = case_when(delicatissima >= (top_n(., 10, delicatissima)%>%
-                                                             arrange(-delicatissima))$delicatissima[10]~ "important",
+         delicatissima_important = case_when(`Pn-delicatissima` >= (top_n(., 10, `Pn-delicatissima`)%>%
+                                                             arrange(-`Pn-delicatissima`))$`Pn-delicatissima`[10]~ "important",
                                            TRUE ~ "not important"),
-         galaxiae_important = case_when(galaxiae >= (top_n(., 10, galaxiae)%>%
-                                                             arrange(-galaxiae))$galaxiae[10]~ "important",
+         galaxiae_important = case_when(`Pn-galaxiae` >= (top_n(., 10, `Pn-galaxiae`)%>%
+                                                             arrange(-`Pn-galaxiae`))$`Pn-galaxiae`[10]~ "important",
                                            TRUE ~ "not important"),
-         hasleana_important = case_when(hasleana >= (top_n(., 10, hasleana)%>%
-                                                             arrange(-hasleana))$hasleana[10]~ "important",
+         hasleana_important = case_when(`Pn-hasleana` >= (top_n(., 10, `Pn-hasleana`)%>%
+                                                             arrange(-`Pn-hasleana`))$`Pn-hasleana`[10]~ "important",
                                            TRUE ~ "not important"),
-         subpacifica_important = case_when(subpacifica >= (top_n(., 10, subpacifica)%>%
-                                                          arrange(-subpacifica))$subpacifica[10]~ "important",
+         subpacifica_important = case_when(`Pn-subpacifica` >= (top_n(., 10, `Pn-subpacifica`)%>%
+                                                          arrange(-`Pn-subpacifica`))$`Pn-subpacifica`[10]~ "important",
                                            TRUE ~ "not important"))
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
@@ -796,8 +796,8 @@ hc_matrix <- mini_matrix_org%>%
   filter(DOM_fil == "DOM")%>%
   select(-c(asin, DOM_fil))%>%
   unite(sample_code, c("Organism", "biological_replicate"), sep = "_")%>%
-  spread(category, zscore)%>%
-  left_join(otu_hc, by = "sample_code")
+  spread(category, zscore)
+  # left_join(otu_hc, by = "sample_code")
   
   
 write_csv(hc_matrix, "Analyzed/hc_matrix.csv")

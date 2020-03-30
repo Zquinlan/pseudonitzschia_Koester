@@ -42,7 +42,7 @@ flag_background <- function(data,
 
 flag_transient <- function(data, 
                            sample_columns = match(names(select(data, -contains("blank", ignore.case = TRUE))), names(data)), 
-                           noise_level = 2E5, 
+                           noise_level = 3E5, 
                            replication_number = 3) 
 {
   require("tidyverse")

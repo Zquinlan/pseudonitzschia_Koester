@@ -102,7 +102,7 @@ culture_samples <- (metadata_quant%>%
   as.vector()
 
 quant_blanks_env <- quant_raw%>%
-  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML)), names(.)))%>%
+  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML, CCE_P1706_2_MSMS.mzXML)), names(.)))%>%
   filter(background_features == "real")%>%
   select(-background_features)
 

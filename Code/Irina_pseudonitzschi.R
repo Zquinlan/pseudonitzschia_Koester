@@ -404,6 +404,7 @@ mini_quant_org <-quant_stats%>%
 
 write_csv(mini_quant_org, "Analyzed/mini_quant_org.csv")  
 
+
 # POST-STATS -- Mini Quant Table unfil ------------------------------------------
 important_quant_dom <- (rf_quant_dom_mda%>%
                           mutate(feature = gsub("X", "", feature))%>%
@@ -934,6 +935,23 @@ cyto_full <- cyto_exp2_org%>%
   full_join(cyto_xic_average_env, by = "feature_number")
 
 write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
+
+
+# VISUALIZATION -- VENN DIAGRAM -------------------------------------------
+env_compare <- cyto_base%>%
+  filter(Experiment != "Exp1",
+         Experiment != "Exp2")%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
+            "biological_replicates", "DOM_fil", 
+            "technical_replicates"))%>%
+  filter(feature_number %in% important_quant_org)%>%
+  group_by(feature_number)%>%
+  filter(sum(xic) != 0)%>%
+  ungroup()%>%
+  spread(sample_code, xic)
+
+length(important_quant_org)
+length(env_compare$feature_number)
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all

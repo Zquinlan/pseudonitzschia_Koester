@@ -858,18 +858,82 @@ write_csv(feature_org_hc, "Analyzed/feature_org_hc.csv")
 write_csv(feature_dom_hc, "Analyzed/feature_dom_hc.csv")
 
 
-# VISUALIZATION -- hc for quant features ----------------------------------
-quant_hc <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
-  filter(feature_number %in% canopus_available_features_org)%>%
-  unite(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                   "technical_replicates"), sep = "_")%>%
-  group_by(feature_number)%>%
-  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
-  ungroup()%>%
-  select(-asin)%>%
-  spread(feature_number, zscore)
+# VISUALIZATION -- Cytoscape ----------------------------------------------
+cyto_base <- quant_df%>%
+  gather(sample_code_ms, xic, 2:ncol(.))%>%
+  mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
+  left_join(sample_rename%>%
+              select(-c(ID_16S, ID_16S_new)), by = "sample_code_ms")%>%
+  select(-sample_code_ms)%>%
+  separate(sample_code, c("Experiment", "Organism", 
+                          "biological_replicates", "DOM_fil", 
+                          "technical_replicates"), sep = "_", remove = FALSE)%>%
+  unite(sample_code, c("Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
+  left_join(chl%>%
+              mutate(sample_code = gsub("Pn_", "Pn-", sample_code)), by = "sample_code")%>%
+  select(-sample_code)%>%
+  filter(!Organism %like% '%blank%',
+         !Organism %like% '%Blank%')%>%
+  unite(sample_code, c("Experiment", "Organism", 
+                          "biological_replicates", "DOM_fil", 
+                          "technical_replicates"), sep = "_", remove = FALSE)%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic),
+         chl_norm = ra/chl,
+         asin = asin(sqrt(chl_norm)))
 
-write_csv(quant_hc, "Analyzed/hc_features.csv")
+cyto_exp2_dom <- cyto_base%>%
+  group_by(DOM_fil, feature_number)%>%
+  select(-c('chl', 'xic', 'asin', 'ra'))%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
+  spread(DOM_fil, chl_norm)%>%
+  select(-4)
+
+cyto_exp2_org <- cyto_base%>%
+  group_by(Organism, DOM_fil, feature_number)%>%
+  select(-c('chl', 'xic', 'asin', 'ra'))%>%
+  filter(Experiment == "Exp2")%>%
+  unite(sample, c(Organism, DOM_fil), sep = "_")%>%
+  spread(sample, chl_norm)%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+cyto_piers <- cyto_base%>%
+  group_by(Organism, biological_replicates, feature_number)%>%
+  select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
+  filter(Experiment == "Piers")%>%
+  unite(sample, c(Organism, biological_replicates), sep = "_")%>%
+  spread(sample, ra)%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+cyto_piers_average <- cyto_base%>%
+  group_by(feature_number)%>%
+  select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
+  filter(Experiment == "Piers")%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
+  rename(average_piers = 2)
+
+cyto_xic_average <- cyto_base%>%
+  group_by(feature_number)%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm'))%>%
+  filter(Experiment == "Exp2")%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
+  rename(average_xic_exp2 = 2)
+
+cyto_xic_average_env <- cyto_base%>%
+  group_by(feature_number)%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm'))%>%
+  filter(Experiment != "Exp1")%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
+  rename(average_xic_exp2env = 2)
+
+cyto_full <- cyto_exp2_org%>%
+  full_join(cyto_exp2_dom, by = "feature_number")%>%
+  full_join(cyto_piers, by = "feature_number")%>%
+  full_join(cyto_piers_average, by = "feature_number")%>%
+  full_join(cyto_xic_average, by = "feature_number")%>%
+  full_join(cyto_xic_average_env, by = "feature_number")
+
+write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all

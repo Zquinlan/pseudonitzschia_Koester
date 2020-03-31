@@ -86,6 +86,9 @@ otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
   rename("sample_name" = "SampleID")%>%
   rename("sample_code" = "OTU_name")
 
+lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
+  rename(feature_number = '#Scan#')%>%
+  mutate(feature_number = as.character(feature_number))
 
 # CLEANING -- Removing Blanks ---------------------------------------------
 field_blanks <- (metadata_quant%>%
@@ -113,7 +116,7 @@ quant_culture_blanks_removed <- quant_blanks_env%>%
   select(-background_features)
   
 quant_df <- quant_blanks_env%>%
-  select(-c(culture_blanks, Media_Blank_100mL.mzML, Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML,CCE_P1706_2_MSMS.mzXML))%>%
+  select(-c(culture_blanks, culture_samples))%>%
   full_join(quant_culture_blanks_removed, by = "feature_number")%>%
   flag_transient()%>%
   filter(transient_features == "real")%>%
@@ -781,7 +784,7 @@ otu_hc <- otu_stats%>%
   spread(Taxonomy, zscore)%>%
   rename("sample_code" = "sample_name")
 
-hc_matrix <- mini_matrix_org%>%
+compound_org_hc <- mini_matrix_org%>%
   gather(category, asin, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism",
                           "biological_replicate", "DOM_fil",
@@ -798,9 +801,62 @@ hc_matrix <- mini_matrix_org%>%
   unite(sample_code, c("Organism", "biological_replicate"), sep = "_")%>%
   spread(category, zscore)
   # left_join(otu_hc, by = "sample_code")
+
+compound_dom_hc <- mini_matrix_dom%>%
+  gather(category, asin, 2:ncol(.))%>%
+  separate(sample_code, c("Experiment", "Organism",
+                          "biological_replicate", "DOM_fil",
+                          "technical_replicate"), sep = "_")%>%
+  group_by(category)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  group_by(category, Organism, biological_replicate, DOM_fil)%>%
+  select(-technical_replicate)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  select(-c(asin))%>%
+  unite(sample_code, c("Organism", "biological_replicate", "DOM_fil"), sep = "_")%>%
+  spread(category, zscore)
+# left_join(otu_hc, by = "sample_code")
   
+feature_org_hc <- mini_quant_org%>%
+  gather(feature_number, asin, 6:ncol(.))%>%
+  group_by(feature_number)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  group_by(feature_number, Organism, biological_replicates, DOM_fil)%>%
+  select(-technical_replicates)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  filter(DOM_fil == "DOM")%>%
+  select(-c(asin, DOM_fil))%>%
+  left_join(lib_id%>%
+              select(feature_number, Compound_Name), by = "feature_number")%>%
+  unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  unite(sample_code, c("Organism", "biological_replicates"), sep = "_")%>%
+  spread(feature, zscore)
+
+feature_dom_hc <- mini_quant_dom%>%
+  gather(feature_number, asin, 6:ncol(.))%>%
+  group_by(feature_number)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  group_by(feature_number, Organism, biological_replicates, DOM_fil)%>%
+  select(-technical_replicates)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  select(-c(asin))%>%
+  unite(sample_code, c("Organism", "biological_replicates", "DOM_fil"), sep = "_")%>%
+  left_join(lib_id%>%
+              select(feature_number, Compound_Name), by = "feature_number")%>%
+  unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  spread(feature, zscore)
   
-write_csv(hc_matrix, "Analyzed/hc_matrix.csv")
+write_csv(compound_org_hc, "Analyzed/compound_org_hc.csv")
+write_csv(compound_dom_hc, "Analyzed/compound_dom_hc.csv")
+write_csv(feature_org_hc, "Analyzed/feature_org_hc.csv")
+write_csv(feature_dom_hc, "Analyzed/feature_dom_hc.csv")
+
 
 # VISUALIZATION -- hc for quant features ----------------------------------
 quant_hc <- quant_stats%>%  ## Okay so here we are first making the data "tidy"

@@ -113,7 +113,7 @@ quant_culture_blanks_removed <- quant_blanks_env%>%
   select(-background_features)
   
 quant_df <- quant_blanks_env%>%
-  select(-c(culture_blanks, culture_samples))%>%
+  select(-c(culture_blanks, Media_Blank_100mL.mzML, Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML,CCE_P1706_2_MSMS.mzXML))%>%
   full_join(quant_culture_blanks_removed, by = "feature_number")%>%
   flag_transient()%>%
   filter(transient_features == "real")%>%

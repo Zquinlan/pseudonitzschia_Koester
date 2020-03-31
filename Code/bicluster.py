@@ -22,7 +22,7 @@ sample = df.pop(args.sample_column)
 
 #Designing the plot
 g = sns.clustermap(df, cmap = current_palette, robust = True, yticklabels = sample, xticklabels = 1)
-plt.setp(g.ax_heatmap.xaxis.get_ticklabels(), fontsize = 8)
+plt.setp(g.ax_heatmap.xaxis.get_ticklabels(), fontsize = 2)
 plt.setp(g.ax_heatmap.yaxis.get_ticklabels(), fontsize = 8)
 plt.gcf().subplots_adjust(bottom=0.35)
 fig = plt.gcf()
@@ -30,5 +30,5 @@ fig.set_size_inches((20, 16))
 
 
 #Showing the plot
-plt.savefig('microbes_hc.png', dpi = 600)
+plt.savefig('feature_dom_hc.png', dpi = 600)
 plt.show()

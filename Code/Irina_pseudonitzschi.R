@@ -798,7 +798,7 @@ compound_org_hc <- mini_matrix_org%>%
   ungroup()%>%
   filter(DOM_fil == "DOM")%>%
   select(-c(asin, DOM_fil))%>%
-  unite(sample_code, c("Organism", "biological_replicate"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicate"), sep = "_")%>%
   spread(category, zscore)
   # left_join(otu_hc, by = "sample_code")
 
@@ -815,7 +815,7 @@ compound_dom_hc <- mini_matrix_dom%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
   select(-c(asin))%>%
-  unite(sample_code, c("Organism", "biological_replicate", "DOM_fil"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicate", "DOM_fil"), sep = "_")%>%
   spread(category, zscore)
 # left_join(otu_hc, by = "sample_code")
   
@@ -833,7 +833,7 @@ feature_org_hc <- mini_quant_org%>%
   left_join(lib_id%>%
               select(feature_number, Compound_Name), by = "feature_number")%>%
   unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
-  unite(sample_code, c("Organism", "biological_replicates"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicates"), sep = "_")%>%
   spread(feature, zscore)
 
 feature_dom_hc <- mini_quant_dom%>%
@@ -846,7 +846,7 @@ feature_dom_hc <- mini_quant_dom%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
   select(-c(asin))%>%
-  unite(sample_code, c("Organism", "biological_replicates", "DOM_fil"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicates", "DOM_fil"), sep = "_")%>%
   left_join(lib_id%>%
               select(feature_number, Compound_Name), by = "feature_number")%>%
   unite(feature, c(feature_number, Compound_Name), sep = "_")%>%

@@ -863,23 +863,22 @@ write_csv(feature_dom_hc, "Analyzed/feature_dom_hc.csv")
 cyto_base <- quant_df%>%
   gather(sample_code_ms, xic, 2:ncol(.))%>%
   mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
-  mutate(sample_code_ms = gsub(".mzXML", "", sample_code_ms))%>%
   left_join(sample_rename%>%
               select(-c(ID_16S, ID_16S_new)), by = "sample_code_ms")%>%
   select(-sample_code_ms)%>%
-  separate(sample_code, c("Experiment", "Organism", 
+  separate(sample_code_ms, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_", remove = FALSE)%>%
-  unite(sample_code, c("Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
+  filter(!Organism %like% '%MediaBlank%',
+         !Organism %like% '%PPLBlank%')%>%
+  unite(sample_code_ms, c("Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
   left_join(chl%>%
-              mutate(sample_code = gsub("Pn_", "Pn-", sample_code)), by = "sample_code")%>%
-  select(-sample_code)%>%
-  filter(!Organism %like% '%PPLBlank%',
-         !Organism %like% '%MediaBlank%')%>%
-  unite(sample_code, c("Experiment", "Organism", 
+              by = "sample_code_ms")%>%
+  select(-sample_code_ms)%>%
+  unite(sample_code_ms, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_", remove = FALSE)%>%
-  group_by(sample_code)%>%
+  group_by(sample_code_ms)%>%
   mutate(ra = xic/sum(xic),
          chl_norm = ra/chl,
          asin = asin(sqrt(chl_norm)))
@@ -908,14 +907,6 @@ cyto_exp2_org2 <- cyto_base%>%
   spread(sample, chl_norm)%>%
   summarize_if(is.numeric, mean, na.rm = TRUE)
 
-cyto_exp1_org2 <- cyto_base%>%
-  group_by(Organism, feature_number)%>%
-  select(-c('chl', 'xic', 'asin', 'ra'))%>%
-  filter(Experiment == "Exp1")%>%
-  unite(sample, c(Experiment, Organism), sep = "_")%>%
-  spread(sample, chl_norm)%>%
-  summarize_if(is.numeric, mean, na.rm = TRUE)
-
 cyto_piers <- cyto_base%>%
   group_by(Organism, biological_replicates, feature_number)%>%
   select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
@@ -924,27 +915,12 @@ cyto_piers <- cyto_base%>%
   spread(sample, ra)%>%
   summarize_if(is.numeric, mean, na.rm = TRUE)
 
-cyto_CCE <- cyto_base%>%
-  group_by(Organism, biological_replicates, feature_number)%>%
-  select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
-  filter(Experiment == "CCE-P1706")%>%
-  unite(sample, c(Organism, biological_replicates), sep = "_")%>%
-  spread(sample, ra)%>%
-  summarize_if(is.numeric, mean, na.rm = TRUE)
-
-cyto_piers_mean <- cyto_base%>%
+cyto_piers_sum <- cyto_base%>%
   group_by(feature_number)%>%
   select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
   filter(Experiment == "Piers")%>%
   summarize_if(is.numeric, mean, na.rm = TRUE)%>%
-  rename(mean_piers = 2)
-
-cyto_CCE_mean <- cyto_base%>%
-  group_by(feature_number)%>%
-  select(-c('chl', 'xic', 'asin', 'chl_norm'))%>%
-  filter(Experiment == "CCE-P1706")%>%
-  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
-  rename(mean_CCE = 2)
+  rename(average_piers = 2)
 
 cyto_xic_sum <- cyto_base%>%
   group_by(feature_number)%>%
@@ -957,17 +933,14 @@ cyto_xic_sum_env <- cyto_base%>%
   group_by(feature_number)%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm'))%>%
   filter(Experiment != "Exp1")%>%
-  summarize_if(is.numeric, sum, na.rm = TRUE)%>%
-  rename(sum_xic_exp2env = 2)
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
+  rename(average_xic_exp2env = 2)
 
 cyto_full <- cyto_exp2_org%>%
   full_join(cyto_exp2_org2, by = "feature_number")%>%
   full_join(cyto_exp2_dom, by = "feature_number")%>%
-  full_join(cyto_exp1_org2, by = "feature_number")%>%
   full_join(cyto_piers, by = "feature_number")%>%
-  full_join(cyto_piers_mean, by = "feature_number")%>%
-  full_join(cyto_CCE, by = "feature_number")%>%
-  full_join(cyto_CCE_mean, by = "feature_number")%>%
+  full_join(cyto_piers_sum, by = "feature_number")%>%
   full_join(cyto_xic_sum, by = "feature_number")%>%
   full_join(cyto_xic_sum_env, by = "feature_number")
 

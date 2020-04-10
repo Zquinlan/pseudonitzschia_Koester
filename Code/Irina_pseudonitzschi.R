@@ -60,17 +60,33 @@ select <- dplyr::select
 tidy <- broom::tidy
 rename <- dplyr::rename
 
-# LOADING -- Dataframes ---------------------------------------------------
-quant_raw <- read_csv("./Raw/quant_all.csv")%>%
-  select(-c(2:3))%>%
-  rename(feature_number = 1)
+rename_sample_codes_ms <- function(x) {
+  new <- x%>%
+    mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms),
+           sample_code_ms = gsub("_MSMS.mzXML", "", sample_code_ms))%>%
+    left_join(sample_rename%>%
+                select(1:2), by = "sample_code_ms")%>%
+    select(-sample_code_ms)
+}
 
+# LOADING -- Dataframes ---------------------------------------------------
 sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
   rename(sample_code_ms = ID_MS,
-         sample_code = ID_new)
+         sample_code = ID_new)%>%
+  mutate(sample_code_ms = gsub("_MSMS", "", sample_code_ms))
+
+quant_raw <- read_csv("./Raw/quant_all.csv")%>%
+  select(-c(2:3))%>%
+  rename(feature_number = 1)%>%
+  gather(sample_code_ms, xic, 2:ncol(.))%>%
+  rename_sample_codes_ms()%>%
+  spread(sample_code, xic)
+  
 
 metadata_quant <- read_tsv("./Raw/Pn_metadata_table.tsv")%>%
-  mutate(filename = gsub("mzXML", "mzML", filename))
+  mutate(filename = gsub("mzXML", "mzML", filename))%>%
+  rename(sample_code_ms = filename)%>%
+  rename_sample_codes_ms()
 
 cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
 
@@ -90,22 +106,24 @@ lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
   rename(feature_number = '#Scan#')%>%
   mutate(feature_number = as.character(feature_number))
 
+
 # CLEANING -- Removing Blanks ---------------------------------------------
 field_blanks <- (metadata_quant%>%
-                      filter(SampleType == "blank_extraction"))$filename%>%
+                      filter(SampleType == "blank_extraction"))$sample_code%>%
   as.vector()
 
 culture_blanks <- (metadata_quant%>%
                      filter(SampleType == "blank_culturemedia",
-                            filename != "Media_Blank_100mL.mzML"))$filename%>%
+                            sample_code != "Media_Blank_100mL"))$sample_code%>%
   as.vector()
 
 culture_samples <- (metadata_quant%>%
-                     filter(ATTRIBUTE_Experiment == "Exp2_Culture"))$filename%>%
+                     filter(ATTRIBUTE_Experiment == "Exp2_Culture"))$sample_code%>%
   as.vector()
 
 quant_blanks_env <- quant_raw%>%
-  flag_background(blank_columns =  match(names(select(., Blank_Fieldtrip.mzML, CCE_P1706_1_MSMS.mzXML, CCE_P1706_2_MSMS.mzXML)), names(.)))%>%
+  flag_background(blank_columns =  match(names(select(., Piers_PPLBlank_D_Unfil_I, `CCE-P1706_PPLBlank_D_Unfil_I`, 
+                                                      `CCE-P1706_PPLBlank_D_Unfil_II`)), names(.)))%>%
   filter(background_features == "real")%>%
   select(-background_features)
 
@@ -125,11 +143,7 @@ quant_df <- quant_blanks_env%>%
 # CLEANING -- Stats dataframes --------------------------------------------------------------------------------
 ## Cleaning all of the data
 quant_stats <- quant_df%>%
-  gather(sample_code_ms, xic, 2:ncol(.))%>%
-  mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
-  left_join(sample_rename%>%
-              select(-c(ID_16S, ID_16S_new)), by = "sample_code_ms")%>%
-  select(-sample_code_ms)%>%
+  gather(sample_code, xic, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_", remove = FALSE)%>%

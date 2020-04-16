@@ -55,7 +55,7 @@ LibIDs_combined_inchifixed <- LibIDs_combined%>%
 #convert inchi of combined table to inchikey for Classyfire
 Combined_classyfire <- LibIDs_combined_inchifixed%>%
   select(`#Scan#`, inchi_combined)%>%
-  filter(inchi_combined != "InChI=N/A")%>%
+  filter(inchi_combined != "InChI=N/A",inchi_combined != "InChI=n/a")%>%
   group_by(`#Scan#`)%>%
   filter(row_number(inchi_combined) == 1 )%>%
   mutate(inchi_key = cs_inchi_inchikey(inchi_combined))%>%
@@ -65,7 +65,13 @@ Combined_classyfire <- LibIDs_combined_inchifixed%>%
 
 write_csv(Combined_classyfire,"./Raw/Pn_GNPS_combined_Inchikeys.csv")
 
+## read file exported from Classyfire
+Classyfire_download <- read_csv("./Raw/Pn_classyfire_download.csv")%>%
+  rename(inchi_key = InChIKey)
 
+#merge results from Classyfire back to feature numbers
+Classyfire <- bind_cols(Combined_classyfire, Classyfire_download)
 
+write_csv(Classyfire,"./Raw/Pn_combined_Classyfire.csv")
 
 

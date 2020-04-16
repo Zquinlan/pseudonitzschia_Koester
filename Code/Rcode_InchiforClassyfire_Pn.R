@@ -70,6 +70,7 @@ Classyfire_download <- read_csv("./Raw/Pn_classyfire_download.csv")%>%
   rename(inchi_key = InChIKey)
 
 #merge results from Classyfire back to feature numbers
+### CAUTION: used bin not joined command, means it's merge by row number, check if correct
 Classyfire <- bind_cols(Combined_classyfire, Classyfire_download)
 
 write_csv(Classyfire,"./Raw/Pn_combined_Classyfire.csv")

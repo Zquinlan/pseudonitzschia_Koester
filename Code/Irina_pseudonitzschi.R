@@ -40,19 +40,6 @@ flag_background <- function(data,
     dplyr::select(-c(max_blanks, mean_samples))
 }
 
-flag_transient <- function(data, 
-                           sample_columns = match(names(select(data, -contains("blank", ignore.case = TRUE))), names(data)), 
-                           noise_level = 3E5, 
-                           replication_number = 3) 
-{
-  require("tidyverse")
-  no_transient <- data%>%
-    add_column(samples_over_noise = rowSums(.[sample_columns] > noise_level), .before = 2)%>%
-    mutate(transient_features = case_when(samples_over_noise >= replication_number ~ "real",
-                                          TRUE ~ "transient"))%>%
-    dplyr::select(-samples_over_noise)
-}
-
 
 map <- purrr::map
 select <- dplyr::select
@@ -63,7 +50,7 @@ rename <- dplyr::rename
 rename_sample_codes_ms <- function(x) {
   new <- x%>%
     mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms),
-           sample_code_ms = gsub("_MSMS.mzXML", "", sample_code_ms))%>%
+           sample_code_ms = gsub(".mzXML", "", sample_code_ms))%>%
     left_join(sample_rename%>%
                 select(1:2), by = "sample_code_ms")%>%
     select(-sample_code_ms)
@@ -72,8 +59,7 @@ rename_sample_codes_ms <- function(x) {
 # LOADING -- Dataframes ---------------------------------------------------
 sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
   rename(sample_code_ms = ID_MS,
-         sample_code = ID_new)%>%
-  mutate(sample_code_ms = gsub("_MSMS", "", sample_code_ms))
+         sample_code = ID_new)
 
 quant_raw <- read_csv("./Raw/quant_all.csv")%>%
   select(-c(2:3))%>%
@@ -122,8 +108,7 @@ culture_samples <- (metadata_quant%>%
   as.vector()
 
 quant_blanks_env <- quant_raw%>%
-  flag_background(blank_columns =  match(names(select(., Piers_PPLBlank_D_Unfil_I, `CCE-P1706_PPLBlank_D_Unfil_I`, 
-                                                      `CCE-P1706_PPLBlank_D_Unfil_II`)), names(.)))%>%
+  flag_background(blank_columns =  match(names(select(., field_blanks)), names(.)))%>%
   filter(background_features == "real")%>%
   select(-background_features)
 
@@ -135,10 +120,7 @@ quant_culture_blanks_removed <- quant_blanks_env%>%
   
 quant_df <- quant_blanks_env%>%
   select(-c(culture_blanks, culture_samples))%>%
-  full_join(quant_culture_blanks_removed, by = "feature_number")%>%
-  flag_transient()%>%
-  filter(transient_features == "real")%>%
-  select(-transient_features)
+  right_join(quant_culture_blanks_removed, by = "feature_number")
 
 # CLEANING -- Stats dataframes --------------------------------------------------------------------------------
 ## Cleaning all of the data

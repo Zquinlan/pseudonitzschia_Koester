@@ -56,6 +56,13 @@ rename_sample_codes_ms <- function(x) {
     select(-sample_code_ms)
 }
 
+rename_sample_codes_16S <- function(x) {
+  new <- x%>%
+    left_join(sample_rename_16S%>%
+                select(1:2), by = "sample_code_16S_old")%>%
+    select(-sample_code_16S_old)
+}
+
 # LOADING -- Dataframes ---------------------------------------------------
 sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
   rename(sample_code_ms = ID_MS,
@@ -67,12 +74,16 @@ quant_raw <- read_csv("./Raw/quant_all.csv")%>%
   gather(sample_code_ms, xic, 2:ncol(.))%>%
   rename_sample_codes_ms()%>%
   spread(sample_code, xic)
-  
+
 
 metadata_quant <- read_tsv("./Raw/Pn_metadata_table.tsv")%>%
   mutate(filename = gsub("mzXML", "mzML", filename))%>%
   rename(sample_code_ms = filename)%>%
   rename_sample_codes_ms()
+
+lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
+  rename(feature_number = '#Scan#')%>%
+  mutate(feature_number = as.character(feature_number))
 
 cat_df <- read_csv("./Raw/Pn_Ex2_MASTERx_Canopus_categories_probability.csv")
 
@@ -82,15 +93,23 @@ feature_info <- read_csv("./Raw/Pn_Ex2_MASTERx_elements.csv")%>%
   rename(feature_number = 1)%>%
   select(feature_number, everything())
 
-otu_df <- read_tsv("./Raw/Irina_2018_16s_exp_GEL.swarm.tax")
+sample_rename_16S <- read_csv("./Raw/Rename_16S_SampleIDs.csv")%>%
+  rename(sample_code_16S_old = ID_16S,
+         sample_code_16S = ID_16S_new)
 
-otu_samples <- read_csv("./Raw/Pn_16S_identifiers.csv")%>%
-  rename("sample_name" = "SampleID")%>%
-  rename("sample_code" = "OTU_name")
+otu_taxonomy <- read_tsv("./Raw/Pn_16S_taxonomy.tsv")%>%
+  rename("#OTU ID" = "Feature ID")
 
-lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
-  rename(feature_number = '#Scan#')%>%
-  mutate(feature_number = as.character(feature_number))
+otu_df <- read_csv("./Raw/dada2-table.csv")%>%
+  gather(sample_code_16S_old, reads, 2:ncol(.))%>%
+  right_join(sample_rename_16S, by = "sample_code_16S_old")%>%
+  select(-sample_code_16S_old)%>%
+  spread(sample_code_16S, reads)%>%
+  left_join(otu_taxonomy,by = "#OTU ID")%>%
+  mutate(Taxon = gsub('D_[0-9]__', '', Taxon))%>%
+  select(-c("#OTU ID", "Confidence"))%>%
+  select("Taxon",everything())
+  
 
 
 # CLEANING -- Removing Blanks ---------------------------------------------
@@ -164,13 +183,11 @@ cat_stats <- cat_df%>%
 
 # CLEANING -- OTU table -------------------------------------------------------------------
 otu_clean <- otu_df%>%
-  select(-c(1:2))%>%
   rownames_to_column("otu_number")%>%
-  gather(sample_code, reads, 3:ncol(.))%>%
-  left_join(otu_samples, ., by = "sample_code")%>%
-  separate(sample_name, c("Experiment", "Organism", "biological_replicate"), sep = "_")%>%
-  unite(sample_name, c("Organism", "biological_replicate"), sep = "_")%>%
-  separate(taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
+  gather(sample_code_16S, reads, 3:ncol(.))%>%
+  #separate(sample_code_16S, c("Experiment", "Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
+  #unite(sample_name, c("Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
+  separate(Taxon, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
   mutate(Class = case_when(Class %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
                            TRUE ~ as.character(Class)),
          Order = case_when(Class == "unclassified" ~ "",
@@ -201,12 +218,12 @@ otu_clean <- otu_df%>%
                          OTU %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "sp",
                          TRUE ~ as.character(OTU)))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
-  select(-c(OTU, Experiment, sample_code))
+  select(-c(OTU))
 
 # PRE-STATS -- OTU TABLE --------------------------------------------------
 ## Making the stats dataframes for OTU, family and classes
 otu_stats <- otu_clean%>%
-  group_by(sample_name)%>%
+  group_by(sample_code_16S)%>%
   mutate(ra = reads/sum(reads),
          asin = asin(sqrt(ra)))%>%
   group_by(Taxonomy)%>%

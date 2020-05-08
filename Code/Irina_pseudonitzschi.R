@@ -40,7 +40,7 @@ flag_background <- function(data,
     dplyr::select(-c(max_blanks, mean_samples))
 }
 
-<<<<<<< HEAD
+
 flag_transient <- function(data, 
                            sample_columns = match(names(select(data, -contains("blank", ignore.case = TRUE))), names(data)), 
                            noise_level = 3E5, 
@@ -53,14 +53,7 @@ flag_transient <- function(data,
                                           TRUE ~ "transient"))%>%
     dplyr::select(-samples_over_noise)
 }
-=======
 
-map <- purrr::map
-select <- dplyr::select
-
-tidy <- broom::tidy
-rename <- dplyr::rename
->>>>>>> 4c19aac9a1d79c8deadaf6b62afae87f622aa62f
 
 rename_sample_codes_ms <- function(x) {
   new <- x%>%
@@ -71,7 +64,6 @@ rename_sample_codes_ms <- function(x) {
     select(-sample_code_ms)
 }
 
-<<<<<<< HEAD
 map <- purrr::map
 select <- dplyr::select
 
@@ -79,14 +71,6 @@ tidy <- broom::tidy
 rename <- dplyr::rename
 
 
-=======
-rename_sample_codes_16S <- function(x) {
-  new <- x%>%
-    left_join(sample_rename_16S%>%
-                select(1:2), by = "sample_code_16S_old")%>%
-    select(-sample_code_16S_old)
-}
->>>>>>> 4c19aac9a1d79c8deadaf6b62afae87f622aa62f
 
 # LOADING -- Dataframes ---------------------------------------------------
 sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
@@ -275,9 +259,10 @@ set.seed(295034) # Setting the seed before we do any stats
 
 # STATS ANOVA -- OTUs One-way -----------------------------------------------------
 otu_aov <- otu_stats%>%
-  separate(sample_name, c("Organism", "Replicate"), sep = "_")%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                          "biological_replicates", "technical_replicates"), sep = "_")%>%
   mutate(Organism = as.factor(Organism))%>%
-  group_by(Taxonomy)%>%
+  group_by(Experiment, Taxonomy)%>%
   nest()%>%
   mutate(data = map(data, ~ aov(asin ~ Organism, .x)%>%
                       tidy()))%>%
@@ -899,12 +884,7 @@ write_csv(feature_dom_hc, "Analyzed/feature_dom_hc.csv")
 
 # VISUALIZATION -- Cytoscape ----------------------------------------------
 cyto_base <- quant_df%>%
-  gather(sample_code_ms, xic, 2:ncol(.))%>%
-  mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms))%>%
-  mutate(sample_code_ms = gsub(".mzXML", "", sample_code_ms))%>%
-  left_join(sample_rename%>%
-              select(-c(ID_16S, ID_16S_new)), by = "sample_code_ms")%>%
-  select(-sample_code_ms)%>%
+  gather(sample_code, xic, 2:ncol(.))%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_", remove = FALSE)%>%

@@ -374,13 +374,14 @@ otu_rf_df <- otu_stats%>%
   filter(Taxonomy %in% sig_otu)%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)%>%
-  separate(sample_name, c("Organism", "biological_replicate"), sep = "_")%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
   select(-biological_replicate)%>%
   mutate(Organism = as.factor(Organism))
 
 names(otu_rf_df) <- make.names(names(otu_rf_df))
   
-otu_rf <-   randomForest(Organism ~ ., otu_rf_df, 
+otu_rf <- randomForest(Organism ~ ., otu_rf_df, 
                          importance = TRUE, proximity = TRUE, nPerm = 10,
                          ntree = 50000, na.action = na.exclude)
 

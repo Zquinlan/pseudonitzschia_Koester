@@ -53,13 +53,6 @@ flag_transient <- function(data,
     dplyr::select(-samples_over_noise)
 }
 
-
-map <- purrr::map
-select <- dplyr::select
-
-tidy <- broom::tidy
-rename <- dplyr::rename
-
 rename_sample_codes_ms <- function(x) {
   new <- x%>%
     mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms),
@@ -68,6 +61,14 @@ rename_sample_codes_ms <- function(x) {
                 select(1:2), by = "sample_code_ms")%>%
     select(-sample_code_ms)
 }
+
+map <- purrr::map
+select <- dplyr::select
+
+tidy <- broom::tidy
+rename <- dplyr::rename
+
+
 
 # LOADING -- Dataframes ---------------------------------------------------
 sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%

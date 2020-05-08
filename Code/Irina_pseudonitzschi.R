@@ -261,6 +261,7 @@ set.seed(295034) # Setting the seed before we do any stats
 otu_aov <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                           "biological_replicates", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2")%>%
   mutate(Organism = as.factor(Organism))%>%
   group_by(Experiment, Taxonomy)%>%
   nest()%>%
@@ -376,6 +377,7 @@ otu_rf_df <- otu_stats%>%
   spread(Taxonomy, asin)%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                               "biological_replicates", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2")%>%
   select(-biological_replicate)%>%
   mutate(Organism = as.factor(Organism))
 
@@ -749,6 +751,7 @@ correlation_matrix <- matrix_multiplied_org%>%
   ungroup()
 
 correlation_microbe <- otu_stats%>%
+  filter(sample_code_16S %like% "%Exp2%")%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)
 
@@ -1028,6 +1031,12 @@ pcoa_quant$values[1:10,]%>%
 
 ## otu
 pcoa_otu <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
+                          "technical_replicates"), sep = "_")%>%
+  filter(Experiment != 'CCE-P1706', 
+         Experiment != 'Piers')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates",
+                              "technical_replicates"), sep = "_")%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)%>%
   column_to_rownames("sample_name")%>%
@@ -1113,8 +1122,8 @@ pcoa_quant$vectors%>%
 pcoa_otu$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
-  separate(sample_code, c("Organism", "biological_replicates"), sep = "_")%>% 
-  ggplot(aes(Axis.1, Axis.2, color = Organism)) +
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
+  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
   geom_point(stat = "identity", aes(size = 0.2)) +
   scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel

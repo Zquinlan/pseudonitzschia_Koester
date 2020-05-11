@@ -113,12 +113,11 @@ field_blanks <- (metadata_quant%>%
   as.vector()
 
 culture_blanks <- (metadata_quant%>%
-                     filter(SampleType == "blank_culturemedia",
-                            sample_code != "Media_Blank_100mL"))$sample_code%>%
+                     filter(SampleType == "blank_culturemedia"))$sample_code%>%
   as.vector()
 
 culture_samples <- (metadata_quant%>%
-                     filter(ATTRIBUTE_Experiment == "Exp2_Culture"))$sample_code%>%
+                     filter(SampleType == "culture_multiplespecies"))$sample_code%>%
   as.vector()
 
 quant_blanks_env <- quant_raw%>%
@@ -143,7 +142,7 @@ quant_stats <- quant_df%>%
   separate(sample_code, c("Experiment", "Organism", 
                           "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_", remove = FALSE)%>%
-  filter(Experiment == "Exp2")%>%
+  filter(Experiment %like any% c("Exp1%","Exp2%"))%>%
   unite(sample_code, c("Organism", "biological_replicates"), sep = "_", remove = FALSE)%>%
   left_join(chl%>%
               mutate(sample_code = gsub("Pn_", "Pn-", sample_code)), by = "sample_code")%>%
@@ -969,7 +968,8 @@ pcoa_otu <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
                           "technical_replicates"), sep = "_")%>%
   filter(Experiment != 'CCE-P1706', 
-         Experiment != 'Piers')%>%
+         Experiment != 'Piers',
+         Experiment != 'Exp1')%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates",
                               "technical_replicates"), sep = "_")%>%
   select(-c(reads, ra))%>%

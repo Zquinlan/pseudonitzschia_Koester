@@ -200,7 +200,7 @@ family_stats <- otu_clean%>%
   select(-c("Genus", "otu_number"))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
   group_by(sample_code_16S,Taxonomy)%>%
-  #gsub(';NA', '', Taxonomy)%>%
+  mutate(Taxonomy = gsub(';NA', '', Taxonomy))%>%
   summarize_if(is.numeric, sum)%>%
   ungroup()%>%
   group_by(sample_code_16S)%>%
@@ -569,7 +569,7 @@ rf_matrix_mda_org <- rf_matrix$importance%>%
 
 write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 
-ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
+#ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
 
 # STATS RANDOM FOREST -- Matrix  Fil_Unfil -------------------------------------------
@@ -707,16 +707,19 @@ correlation_matrix <- matrix_multiplied_org%>%
 
 correlation_microbe <- otu_stats%>%
   filter(sample_code_16S %like% "%Exp2%")%>%
+  rename('sample_name' = 'sample_code_16S')%>%
+  filter(Taxonomy %like any% sig_otu)%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)
 
 correlation_table <- correlation_matrix%>%
-  unite(sample_name, c("Organism", "biological_replicates"), sep = "_")%>%
-  group_by(DOM_fil)%>%
-  nest()%>%
-  mutate(data = map(data, ~ left_join(.x, correlation_microbe, by = "sample_name")%>%
-                      gather(microbe, microbe_asin, contains(";"))%>%
-                      gather(category, category_asin, 2:31)))
+  filter(DOM_fil != 'Unfil')%>%
+  mutate(Experiment = 'Exp2')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
+  left_join(correlation_microbe%>%
+              mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
+  gather(microbe, microbe_asin, contains(";"))%>%
+  gather(category, category_asin, 3:32)
 
 
 correlation_pvals <- correlation_table%>%

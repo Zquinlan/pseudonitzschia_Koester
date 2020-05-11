@@ -41,20 +41,6 @@ flag_background <- function(data,
 }
 
 
-flag_transient <- function(data, 
-                           sample_columns = match(names(select(data, -contains("blank", ignore.case = TRUE))), names(data)), 
-                           noise_level = 3E5, 
-                           replication_number = 3) 
-{
-  require("tidyverse")
-  no_transient <- data%>%
-    add_column(samples_over_noise = rowSums(.[sample_columns] > noise_level), .before = 2)%>%
-    mutate(transient_features = case_when(samples_over_noise >= replication_number ~ "real",
-                                          TRUE ~ "transient"))%>%
-    dplyr::select(-samples_over_noise)
-}
-
-
 rename_sample_codes_ms <- function(x) {
   new <- x%>%
     mutate(sample_code_ms = gsub(".mzML", "", sample_code_ms),
@@ -196,38 +182,8 @@ otu_clean <- otu_df%>%
   gather(sample_code_16S, reads, 3:ncol(.))%>%
   #separate(sample_code_16S, c("Experiment", "Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
   #unite(sample_name, c("Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
-  separate(Taxon, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "OTU"), sep = ";")%>%
-  mutate(Class = case_when(Class %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
-                           TRUE ~ as.character(Class)),
-         Order = case_when(Class == "unclassified" ~ "",
-                           TRUE ~ as.character(Order)),
-         Family = case_when(Class == "unclassified" ~ "",
-                            TRUE ~ as.character(Family)),
-         Genus = case_when(Class == "unclassified" ~ "",
-                           TRUE ~ as.character(Genus)),
-         OTU = case_when(Class == "unclassified" ~ "",
-                         TRUE ~ as.character(OTU)),
-         Order = case_when(Order %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
-                           TRUE ~ as.character(Order)),
-         Family = case_when(Order == "unclassified" ~ "",
-                            TRUE ~ as.character(Family)),
-         Genus = case_when(Order == "unclassified" ~ "",
-                           TRUE ~ as.character(Genus)),
-         OTU = case_when(Order == "unclassified" ~ "",
-                         TRUE ~ as.character(OTU)),
-         Family = case_when(Family %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
-                            TRUE ~ as.character(Family)),
-         Genus = case_when(Family == "unclassified" ~ "",
-                           TRUE ~ as.character(Genus)),
-         OTU = case_when(Family == "unclassified" ~ "",
-                         TRUE ~ as.character(OTU)),
-         Genus = case_when(Genus %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "unclassified",
-                           TRUE ~ as.character(Genus)),
-         OTU = case_when(Genus == "unclassified" ~ "",
-                         OTU %like any% c("%uncultured%", "%unclassified%", "%unidentified%") ~ "sp",
-                         TRUE ~ as.character(OTU)))%>%
-  unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
-  select(-c(OTU))
+  unite(Taxonomy, c("Taxon", "otu_number"), sep = ";")
+
 
 # PRE-STATS -- OTU TABLE --------------------------------------------------
 ## Making the stats dataframes for OTU, family and classes
@@ -243,10 +199,11 @@ family_stats <- otu_clean%>%
   separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
   select(-c("Genus", "otu_number"))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
-  group_by(sample_name,Taxonomy)%>%
+  group_by(sample_code_16S,Taxonomy)%>%
+  #gsub(';NA', '', Taxonomy)%>%
   summarize_if(is.numeric, sum)%>%
   ungroup()%>%
-  group_by(sample_name)%>%
+  group_by(sample_code_16S)%>%
   mutate(ra = reads/sum(reads),
          asin = asin(sqrt(ra)))%>%
   group_by(Taxonomy)%>%
@@ -262,6 +219,9 @@ otu_aov <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                           "biological_replicates", "technical_replicates"), sep = "_")%>%
   filter(Experiment == "Exp2")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()%>%
   mutate(Organism = as.factor(Organism))%>%
   group_by(Experiment, Taxonomy)%>%
   nest()%>%

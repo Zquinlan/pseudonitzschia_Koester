@@ -173,8 +173,7 @@ cat_stats <- cat_df%>%
   ungroup()%>%
   mutate(asin = asin(sqrt(prob)))%>%
   select(-prob)%>%
-  spread(cat, asin)%>%
-  left_join(cat_df[1:24], by = "FeatureID")
+  spread(cat, asin)
 
 # CLEANING -- OTU table -------------------------------------------------------------------
 otu_clean <- otu_df%>%

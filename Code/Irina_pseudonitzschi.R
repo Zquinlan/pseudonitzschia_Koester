@@ -258,11 +258,6 @@ aov_DOM_fil_sigs <- (aov_pvalues%>%
   unique()%>%
   as.vector()
 
-aov_all_sigs <- (aov_pvalues)$feature_number%>%
-  as.factor()%>%
-  unique()%>%
-  as.vector()
-
 # STATS RANDOM FOREST -- QUANT Organism ----------------------------------------------
 quant_org_rf_prep <- quant_stats%>%  ## Okay so here we are first making the data "tidy"
   filter(feature_number %in% aov_organism_sigs)%>%
@@ -338,7 +333,7 @@ otu_rf_df <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                               "biological_replicates", "technical_replicates"), sep = "_")%>%
   filter(Experiment == "Exp2")%>%
-  select(-biological_replicate)%>%
+  select(-c(Experiment, biological_replicates, technical_replicates))%>%
   mutate(Organism = as.factor(Organism))
 
 names(otu_rf_df) <- make.names(names(otu_rf_df))
@@ -547,7 +542,7 @@ rf_matrix <- randomForest(Organism ~ ., multi_matrix_random_forest_df,
 top30_org <- (rf_matrix$importance%>% 
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
-                  top_n(10, MeanDecreaseAccuracy))$feature%>%
+                  top_n(30, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 
@@ -593,7 +588,7 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
 top30_unfil <- (rf_matrix_UnfilFil$importance%>%
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
-                  top_n(15, MeanDecreaseAccuracy))$feature%>%
+                  top_n(30, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
 rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
@@ -754,13 +749,6 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
   spread(feature, val)
 
 write_csv(mini_matrix_dom, "Analyzed/mini_matrix_important_dom.csv")
-
-
-# POST-STATS -- mini-matrix both org unfilfil important features ----------
-mini_matrix_all <- mini_matrix_org%>%
-  left_join(mini_matrix_dom, by = "sample_code")
-
-write_csv(mini_matrix_all, "Analyzed/mini_matrix_important_all.csv")
 
 # POST STATS -- matrix for HC ---------------------------------------------
 otu_hc <- otu_stats%>%

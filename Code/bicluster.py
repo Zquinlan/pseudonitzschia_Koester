@@ -14,6 +14,7 @@ df = pd.read_csv(args.infile)
 
 #Setting font and color pallette
 current_palette = sns.color_palette("Greys", 200)
+
 #sns.set(font_scale = 0.3)
 
 #set sample name and color

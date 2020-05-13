@@ -1049,7 +1049,22 @@ pcoa_quant$vectors%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                           "technical_replicates"), sep = "_")%>% 
-  pcoa_settings() +
+  unite(DOM_fil, c("Experiment", "DOM_fil"), sep = "  ")%>%
+  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
+  geom_point(stat = "identity") +
+  scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
+  scale_shape_manual(values=c(2, 17,1,16))+
+  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+        axis.title.x = element_text(size=14, face="bold"),
+        axis.title.y = element_text(size=14, face="bold"),
+        axis.text.x = element_text(face="bold", size=14),
+        axis.text.y = element_text(face="bold", size=14),
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+        axis.line = element_line(color="black")) +
   ylab(str_c("Axis 2", " (", round(pcoa_quant$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
   xlab(str_c("Axis 1", " (", round(pcoa_quant$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   ggtitle("quant all")

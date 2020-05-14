@@ -328,6 +328,8 @@ sig_otu <- otu_aov$Taxonomy%>%
 otu_rf_df <- otu_stats%>%
   filter(Taxonomy %in% sig_otu)%>%
   select(-c(reads, ra))%>%
+  mutate(Taxonomy = gsub(";", "_", Taxonomy),
+         Taxonomy = gsub(" ", "SPACE", Taxonomy))%>%
   spread(Taxonomy, asin)%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                               "biological_replicates", "technical_replicates"), sep = "_")%>%
@@ -349,7 +351,8 @@ otu_rf_mda <- otu_rf$importance%>%
                                              TRUE ~ "not important"))
 
 important_org_otu <- (otu_rf_mda%>%
-                        mutate(feature = gsub("\\.", ";", feature))%>%
+                        mutate(feature = gsub("_", ";", feature),
+                               feature = gsub("SPACE", " ", feature))%>%
                         top_n(30, MeanDecreaseAccuracy))$feature%>%
   unique()%>%
   as.vector()
@@ -742,10 +745,10 @@ otu_hc <- otu_stats%>%
   group_by(Taxonomy)%>%
   filter(sample_code_16S %like% "Exp2%")%>%
   mutate(zscore = (asin - mean(asin))/sd(asin))%>%
-  ungroup()%>%
   select(-c(reads, ra, asin))%>%
-  spread(Taxonomy, zscore)%>%
-  rename("sample_code" = "sample_code_16S")
+  ungroup()%>%
+  spread(Taxonomy, zscore)
+  # rename("sample_code" = "sample_code_16S")
 
 compound_org_hc <- mini_matrix_org%>%
   gather(category, asin, 2:ncol(.))%>%
@@ -757,7 +760,7 @@ compound_org_hc <- mini_matrix_org%>%
   ungroup()%>%
   group_by(category, Organism, biological_replicate, DOM_fil)%>%
   select(-technical_replicate)%>%
-  summarize_if(is.numeric, mean)%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
   ungroup()%>%
   filter(DOM_fil == "DOM")%>%
   select(-c(asin, DOM_fil))%>%
@@ -775,7 +778,7 @@ compound_dom_hc <- mini_matrix_dom%>%
   ungroup()%>%
   group_by(category, Organism, biological_replicate, DOM_fil)%>%
   select(-technical_replicate)%>%
-  summarize_if(is.numeric, mean)%>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)%>%
   ungroup()%>%
   select(-c(asin))%>%
   unite(sample, c("Organism", "biological_replicate", "DOM_fil"), sep = "_")%>%

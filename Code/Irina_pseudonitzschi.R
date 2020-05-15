@@ -92,10 +92,10 @@ sample_rename_16S <- read_csv("./Raw/Rename_16S_SampleIDs.csv")%>%
   rename(sample_code_16S_old = ID_16S,
          sample_code_16S = ID_16S_new)
 
-otu_taxonomy <- read_tsv("./Raw/Pn_16S_taxonomy.tsv")%>%
+otu_taxonomy <- read_tsv("./Raw/Pn_16S_no-plastids_taxonomy.tsv")%>%
   rename("#OTU ID" = "Feature ID")
 
-otu_df <- read_csv("./Raw/dada2-table.csv")%>%
+otu_df <- read_csv("./Raw/no-plastids-dada2-table.csv")%>%
   gather(sample_code_16S_old, reads, 2:ncol(.))%>%
   right_join(sample_rename_16S, by = "sample_code_16S_old")%>%
   select(-sample_code_16S_old)%>%
@@ -935,9 +935,8 @@ write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
 
 
 # VISUALIZATION -- VENN DIAGRAM -------------------------------------------
-env_compare <- cyto_base%>%
-  filter(Experiment != "Exp1",
-         Experiment != "Exp2")%>%
+CCE_compare <- cyto_base%>%
+  filter(Experiment == "CCE-P1706")%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
             "biological_replicates", "DOM_fil", 
             "technical_replicates"))%>%
@@ -948,8 +947,44 @@ env_compare <- cyto_base%>%
   spread(sample_code, xic)
 
 length(important_quant_org)
-length(env_compare$feature_number)
+length(CCE_compare$feature_number)
 
+
+CCE_features <- cyto_base%>%
+  filter(Experiment == "CCE-P1706")%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
+            "biological_replicates", "DOM_fil", 
+            "technical_replicates"))%>%
+  group_by(feature_number)%>%
+  filter(sum(xic) != 0)%>%
+  ungroup()%>%
+  spread(sample_code, xic)
+
+
+
+Piers_compare <- cyto_base%>%
+  filter(Experiment == "Piers")%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
+            "biological_replicates", "DOM_fil", 
+            "technical_replicates"))%>%
+  filter(feature_number %in% important_quant_org)%>%
+  group_by(feature_number)%>%
+  filter(sum(xic) != 0)%>%
+  ungroup()%>%
+  spread(sample_code, xic)
+
+length(important_quant_org)
+length(Piers_compare$feature_number)
+
+Piers_features <- cyto_base%>%
+  filter(Experiment == "Piers")%>%
+  select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
+            "biological_replicates", "DOM_fil", 
+            "technical_replicates"))%>%
+  group_by(feature_number)%>%
+  filter(sum(xic) != 0)%>%
+  ungroup()%>%
+  spread(sample_code, xic)
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all
 pcoa_quant <- quant_stats%>%
@@ -975,6 +1010,29 @@ pcoa_otu <- otu_stats%>%
          Experiment != 'Piers')%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates",
                               "technical_replicates"), sep = "_")%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)%>%
+  column_to_rownames("sample_name")%>%
+  vegdist(na.rm = TRUE)%>%
+  pcoa()
+
+pcoa_otu$values[1:10,]%>%
+  as.data.frame()%>%
+  rownames_to_column("Axis")%>%
+  mutate(axis = as.numeric(Axis))%>%
+  ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
+  geom_bar(stat = "identity") +
+  geom_text(size = 3, color = "red", vjust = -0.5)
+
+
+##OTU Exp1 and 2 del,mul,sub
+pcoa_otu <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
+                              "technical_replicates"), sep = "_")%>%
+  filter(Experiment != 'CCE-P1706', 
+         Experiment != 'Piers')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates",
+                       "technical_replicates"), sep = "_")%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)%>%
   column_to_rownames("sample_name")%>%
@@ -1062,7 +1120,7 @@ pcoa_otu$vectors%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
-  geom_point(stat = "identity", aes(size = 0.2)) +
+  geom_point(stat = "identity", aes(size = 0.1)) +
   scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot

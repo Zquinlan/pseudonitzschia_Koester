@@ -985,6 +985,11 @@ Piers_features <- cyto_base%>%
   filter(sum(xic) != 0)%>%
   ungroup()%>%
   spread(sample_code, xic)
+
+Env_compare <- inner_join(Piers_features, CCE_features)
+
+length(Env_compare$feature_number)
+
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all
 pcoa_quant <- quant_stats%>%
@@ -1006,8 +1011,11 @@ pcoa_quant$values[1:10,]%>%
 pcoa_otu <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
                           "technical_replicates"), sep = "_")%>%
-  filter(Experiment != 'CCE-P1706', 
-         Experiment != 'Piers')%>%
+  filter(Experiment != "CCE-P1706", 
+         Experiment != "Piers")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates",
                               "technical_replicates"), sep = "_")%>%
   select(-c(reads, ra))%>%

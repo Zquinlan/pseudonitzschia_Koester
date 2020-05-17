@@ -1007,12 +1007,19 @@ pcoa_quant$values[1:10,]%>%
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
 
-## otu
-pcoa_otu <- otu_stats%>%
-  separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
-                          "technical_replicates"), sep = "_")%>%
+## otu Exp1 and 2 del, sub, mul
+
+pcoa_otu_bothExp <- otu_stats%>%
+  filter(sample_code_16S != "Exp1_Pn-subpacifica_A_I", 
+         sample_code_16S != "Exp1_Pn-subpacifica_A_II",
+         sample_code_16S != "Exp1_Pn-delicatissima_B_I",
+         sample_code_16S != "Exp1_Pn-delicatissima_B_II",)%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
   filter(Experiment != "CCE-P1706", 
          Experiment != "Piers")%>%
+  filter(Organism != "Pn-hasleana", 
+         Organism != "Pn-galaxiae")%>%
   group_by(Taxonomy)%>%
   filter(sum(asin) != 0)%>%
   ungroup()%>%
@@ -1024,7 +1031,7 @@ pcoa_otu <- otu_stats%>%
   vegdist(na.rm = TRUE)%>%
   pcoa()
 
-pcoa_otu$values[1:10,]%>%
+pcoa_otu_bothExp$values[1:10,]%>%
   as.data.frame()%>%
   rownames_to_column("Axis")%>%
   mutate(axis = as.numeric(Axis))%>%
@@ -1032,13 +1039,15 @@ pcoa_otu$values[1:10,]%>%
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
 
+## otu Exp2
 
-##OTU Exp1 and 2 del,mul,sub
-pcoa_otu <- otu_stats%>%
-  separate(sample_code_16S, c("Experiment", "Organism", "biological_replicates",
-                              "technical_replicates"), sep = "_")%>%
-  filter(Experiment != 'CCE-P1706', 
-         Experiment != 'Piers')%>%
+pcoa_otu_Exp2 <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates",
                        "technical_replicates"), sep = "_")%>%
   select(-c(reads, ra))%>%
@@ -1047,13 +1056,16 @@ pcoa_otu <- otu_stats%>%
   vegdist(na.rm = TRUE)%>%
   pcoa()
 
-pcoa_otu$values[1:10,]%>%
+pcoa_otu_Exp2$values[1:10,]%>%
   as.data.frame()%>%
   rownames_to_column("Axis")%>%
   mutate(axis = as.numeric(Axis))%>%
   ggplot(aes(reorder(Axis, axis), Relative_eig, label = round(Relative_eig, digits = 3))) +
   geom_bar(stat = "identity") +
   geom_text(size = 3, color = "red", vjust = -0.5)
+
+
+
 
 ## Organism Matrix
 pcoa_org <- matrix_multiplied_org%>%
@@ -1123,7 +1135,30 @@ pcoa_quant$vectors%>%
   xlab(str_c("Axis 1", " (", round(pcoa_quant$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   ggtitle("quant all")
 
-pcoa_otu$vectors%>%
+pcoa_otu_bothExp$vectors%>%
+  as.data.frame()%>%
+  rownames_to_column("sample_code")%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
+  ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
+  geom_point(stat = "identity", aes(size = 0.1)) +
+  scale_color_manual(values = c("#75d648", "#f27304", "#64d6f7")) +
+  scale_shape_manual(values=c(17,16))+
+  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+        axis.title.x = element_text(size=14, face="bold"),
+        axis.title.y = element_text(size=14, face="bold"),
+        axis.text.x = element_text(face="bold", size=14),
+        axis.text.y = element_text(face="bold", size=14),
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+        axis.line = element_line(color="black"))+
+  ylab(str_c("Axis 2", " (", round(pcoa_otu_bothExp$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_otu_bothExp$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  ggtitle("otus")
+
+pcoa_otu_Exp2$vectors%>%
   as.data.frame()%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
@@ -1141,8 +1176,8 @@ pcoa_otu$vectors%>%
         legend.background = element_rect(fill = "transparent"), # get rid of legend bg
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
         axis.line = element_line(color="black"))+
-  ylab(str_c("Axis 2", " (", round(pcoa_otu$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
-  xlab(str_c("Axis 1", " (", round(pcoa_otu$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
+  ylab(str_c("Axis 2", " (", round(pcoa_otu_Exp2$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
+  xlab(str_c("Axis 1", " (", round(pcoa_otu_Exp2$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
   ggtitle("otus")
 
 pcoa_org$vectors%>%

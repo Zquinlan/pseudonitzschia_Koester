@@ -1106,7 +1106,7 @@ pcoa_dom$values[1:10,]%>%
 #Settings for Pcoas
 pcoa_settings <- function(x) {
   ggplot(x, aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
-  geom_point(stat = "identity") +
+  geom_point(stat = "identity", size = 4) +
     scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
     scale_shape_manual(values=c(1, 16))+
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
@@ -1140,7 +1140,7 @@ pcoa_otu_bothExp$vectors%>%
   rownames_to_column("sample_code")%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
-  geom_point(stat = "identity", aes(size = 0.1)) +
+  geom_point(size = 4) +
   scale_color_manual(values = c("#75d648", "#f27304", "#64d6f7")) +
   scale_shape_manual(values=c(17,16))+
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel

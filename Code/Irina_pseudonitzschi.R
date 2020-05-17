@@ -329,7 +329,8 @@ otu_rf_df <- otu_stats%>%
   filter(Taxonomy %in% sig_otu)%>%
   select(-c(reads, ra))%>%
   mutate(Taxonomy = gsub(";", "_", Taxonomy),
-         Taxonomy = gsub(" ", "SPACE", Taxonomy))%>%
+         Taxonomy = gsub(" ", "SPACE", Taxonomy),
+         Taxonomy = gsub("-", "LINE", Taxonomy))%>%
   spread(Taxonomy, asin)%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                               "biological_replicates", "technical_replicates"), sep = "_")%>%
@@ -352,7 +353,8 @@ otu_rf_mda <- otu_rf$importance%>%
 
 important_org_otu <- (otu_rf_mda%>%
                         mutate(feature = gsub("_", ";", feature),
-                               feature = gsub("SPACE", " ", feature))%>%
+                               feature = gsub("SPACE", " ", feature),
+                               feature = gsub("LINE", "-", feature))%>%
                         top_n(30, MeanDecreaseAccuracy))$feature%>%
   unique()%>%
   as.vector()
@@ -562,6 +564,8 @@ write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
 # STATS RANDOM FOREST -- Matrix  Fil_Unfil -------------------------------------------
 multi_matrix_random_forest_UnfilFil_df <- multi_matrix_tidy_dom%>%
   filter(category %in% matrix_aov_dom_sig)%>%
+    mutate(category = gsub("-", "LINE", category),
+           category = gsub(" ", "SPACE", category))%>%
   spread(category,mult)%>%
   select(c(DOM_fil, 7:ncol(.)))%>%
   mutate(DOM_fil = as.factor(DOM_fil))
@@ -575,6 +579,8 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
 top30_unfil <- (rf_matrix_UnfilFil$importance%>%
                   as.data.frame()%>%
                   rownames_to_column("feature")%>%
+                  mutate(feature = gsub("LINE", "-", feature),
+                         feature = gsub("SPACE", " ", feature))%>%
                   top_n(30, MeanDecreaseAccuracy))$feature%>%
   as.vector()
 
@@ -726,7 +732,8 @@ write_csv(correlation_pvals, "Analyzed/correlation_analysis.csv")
 
 # POST-STATS -- mini-matrix unfilfil -----------------------------------------------
 important_unfil_compounds <- (rf_matrix_UnfilFil_mda%>%
-                              mutate(feature = gsub("X", "", feature))%>%
+                                mutate(feature = gsub("LINE", "-", feature),
+                                       feature = gsub("SPACE", " ", feature))%>%
                                 top_n(30, MeanDecreaseAccuracy))$feature%>%
   unique()%>%
   as.vector()

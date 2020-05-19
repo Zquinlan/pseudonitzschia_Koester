@@ -1,5 +1,6 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 import argparse
 
@@ -8,6 +9,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('infile', help = 'csv_dataframe')
 parser.add_argument('sample_column', help = 'what is the name of the sample_column')
 args = parser.parse_args()
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
+mpl.rcParams['svg.fonttype'] = 'none'
+
 
 #Reading in file
 df = pd.read_csv(args.infile)
@@ -31,5 +36,5 @@ fig.set_size_inches((20, 16))
 
 
 #Showing the plot
-plt.savefig('feature_dom_hc.png', dpi = 600)
+plt.savefig('feature_dom_hc.svg', format = 'svg', dpi = 600)
 plt.show()

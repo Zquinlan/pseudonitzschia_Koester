@@ -209,6 +209,27 @@ family_stats <- otu_clean%>%
   filter(sum(asin) != 0)%>%
   ungroup()
 
+###write file for OTU table (all in Exp 2)
+
+otu_tableSI <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()%>%
+  mutate(Organism = as.factor(Organism))%>%
+  group_by(Experiment, Taxonomy)%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates",
+                       "technical_replicates"), sep = "_")%>%
+  select(-c(reads, asin))%>%
+  spread(sample_name, ra)
+
+all_otu <- otu_tableSI$Taxonomy%>%
+  as.vector()
+
+write_csv(otu_tableSI, "Analyzed/OTU_RA_all.csv")
+
 # STATS -- SET SEED -------------------------------------------------------
 set.seed(295034) # Setting the seed before we do any stats
 
@@ -685,7 +706,7 @@ write_csv(feature_info_test_dom, "Analyzed/Ttest_elements_dom.csv")
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
 ## Doing this between OTU and multiplied matrix
-correlation_matrix <- matrix_multiplied_org%>%
+correlation_matrix_classes <- matrix_multiplied_org%>%
   gather(compound, val, 2:ncol(.))%>%
   mutate(compound = gsub("[[:space:]]", ".", compound))%>%
   mutate(compound = gsub("-", ".", compound))%>%
@@ -698,24 +719,24 @@ correlation_matrix <- matrix_multiplied_org%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()
 
-correlation_microbe <- otu_stats%>%
+correlation_microbe_Top29 <- otu_stats%>%
   filter(sample_code_16S %like% "%Exp2%")%>%
   rename('sample_name' = 'sample_code_16S')%>%
   filter(Taxonomy %like any% sig_otu)%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)
 
-correlation_table <- correlation_matrix%>%
+correlation_table_classes <- correlation_matrix_classes%>%
   filter(DOM_fil != 'Unfil')%>%
   mutate(Experiment = 'Exp2')%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
-  left_join(correlation_microbe%>%
+  left_join(correlation_microbe_Top29%>%
               mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
   gather(microbe, microbe_asin, contains(";"))%>%
   gather(category, category_asin, 3:32)
 
 
-correlation_pvals <- correlation_table%>%
+correlation_pvals_classes <- correlation_table_classes%>%
   ungroup()%>%
   group_by(DOM_fil, microbe, category)%>%
   filter(sum(category_asin) > 0)%>%
@@ -727,7 +748,58 @@ correlation_pvals <- correlation_table%>%
   ungroup()%>%
   mutate(FDR = p.adjust(p.value, method = "BH"))
 
-write_csv(correlation_pvals, "Analyzed/correlation_analysis.csv")
+write_csv(correlation_pvals_classes, "Analyzed/correlation_analysis_classes.csv")
+
+
+## Correlation analysis
+## Doing this between OTU and LibIDs
+
+correlation_quant_LibID <- quant_stats%>%
+  unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
+                   "technical_replicates"), sep = "_")%>%
+  group_by(feature)%>%
+  ungroup()%>%
+  spread(feature_number, asin)%>%
+  separate(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
+                          "technical_replicates"), sep = "_")%>%
+  select(-c(Experiment, technical_replicates))%>%
+  group_by(Organism, biological_replicates, DOM_fil)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  select(Organism, biological_replicates, DOM_fil, "1795", "1855", "3988", "4471", "4582", "864", "5432", "5563", "6693", "3667", "4075", "7249", "4580", "8081")
+  
+
+
+correlation_microbe_all <- otu_stats%>%
+  filter(sample_code_16S %like% "%Exp2%")%>%
+  rename('sample_name' = 'sample_code_16S')%>%
+  filter(Taxonomy %like any% all_otu)%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)
+
+correlation_table_LibIDs <- correlation_quant_LibID%>%
+  filter(DOM_fil != 'Unfil')%>%
+  mutate(Experiment = 'Exp2')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
+  left_join(correlation_microbe_all%>%
+              mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
+  gather(microbe, microbe_asin, contains(";"))%>%
+  gather(category, category_asin, 3:16)
+
+
+correlation_pvals_LibIDs <- correlation_table_LibIDs%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  ungroup()%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
+
+write_csv(correlation_pvals_LibIDs, "Analyzed/correlation_analysis_LibIds.csv")
 
 
 # POST-STATS -- mini-matrix unfilfil -----------------------------------------------

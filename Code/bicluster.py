@@ -36,5 +36,5 @@ fig.set_size_inches((20, 16))
 
 
 #Showing the plot
-plt.savefig('feature_dom_hc.svg', format = 'svg', dpi = 600)
+plt.savefig('otu_compound_hc.svg', format = 'svg', dpi = 600)
 plt.show()

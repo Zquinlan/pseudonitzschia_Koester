@@ -181,7 +181,8 @@ otu_clean <- otu_df%>%
   gather(sample_code_16S, reads, 3:ncol(.))%>%
   #separate(sample_code_16S, c("Experiment", "Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
   #unite(sample_name, c("Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
-  unite(Taxonomy, c("Taxon", "otu_number"), sep = ";")
+  unite(Taxonomy, c("Taxon", "otu_number"), sep = ";")%>%
+  filter(!Taxonomy %like any% c('%Eukaryota%', '%Cyanobacteria%'))
 
 
 # PRE-STATS -- OTU TABLE --------------------------------------------------
@@ -198,16 +199,36 @@ family_stats <- otu_clean%>%
   separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
   select(-c("Genus", "otu_number"))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
-  group_by(sample_code_16S,Taxonomy)%>%
   mutate(Taxonomy = gsub(';NA', '', Taxonomy))%>%
+  group_by(sample_code_16S,Taxonomy)%>%
   summarize_if(is.numeric, sum)%>%
   ungroup()%>%
   group_by(sample_code_16S)%>%
-  mutate(ra = reads/sum(reads),
-         asin = asin(sqrt(ra)))%>%
+  mutate(ra = reads/sum(reads, na.rm = TRUE))%>%
   group_by(Taxonomy)%>%
-  filter(sum(asin) != 0)%>%
-  ungroup()
+  mutate(mean = mean(ra, na.rm = TRUE),
+         sd = sd(ra, na.rm = TRUE))%>%
+  select(-c(reads, ra))%>%
+  unique()
+
+
+class_stats <- otu_clean%>%
+  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  select(-c("Order", "Family", "Genus", "otu_number"))%>%
+  unite(Taxonomy, c("Kingdom", "Phylum", "Class"), sep = ";")%>%
+  mutate(Taxonomy = gsub(';NA', '', Taxonomy))%>%
+  group_by(sample_code_16S,Taxonomy)%>%
+  summarize_if(is.numeric, sum)%>%
+  ungroup()%>%
+  group_by(sample_code_16S)%>%
+  mutate(ra = reads/sum(reads))%>%
+  group_by(Taxonomy)%>%
+  mutate(mean = mean(ra, na.rm = TRUE),
+         sd = sd(ra, na.rm = TRUE))%>%
+  select(-c(reads, ra))%>%
+  unique()
+
+
 
 ###write file for OTU table (all in Exp 2)
 

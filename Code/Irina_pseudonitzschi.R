@@ -1040,6 +1040,13 @@ CCE_compare <- cyto_base%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
             "biological_replicates", "DOM_fil", 
             "technical_replicates"))%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic))%>%
+  ungroup()%>%
+  group_by(feature_number)%>%
+  filter(max(ra) >= 0.001)%>%
+  ungroup()%>%
+  select(-ra)%>%
   filter(feature_number %in% important_quant_org)%>%
   group_by(feature_number)%>%
   filter(sum(xic) != 0)%>%
@@ -1055,6 +1062,13 @@ CCE_features <- cyto_base%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
             "biological_replicates", "DOM_fil", 
             "technical_replicates"))%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic))%>%
+  ungroup()%>%
+  group_by(feature_number)%>%
+  filter(max(ra) >= 0.001)%>%
+  ungroup()%>%
+  select(-ra)%>%
   group_by(feature_number)%>%
   filter(sum(xic) != 0)%>%
   ungroup()%>%
@@ -1067,6 +1081,13 @@ Piers_compare <- cyto_base%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
             "biological_replicates", "DOM_fil", 
             "technical_replicates"))%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic))%>%
+  ungroup()%>%
+  group_by(feature_number)%>%
+  filter(max(ra) >= 0.001)%>%
+  ungroup()%>%
+  select(-ra)%>%
   filter(feature_number %in% important_quant_org)%>%
   group_by(feature_number)%>%
   filter(sum(xic) != 0)%>%
@@ -1081,12 +1102,19 @@ Piers_features <- cyto_base%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
             "biological_replicates", "DOM_fil", 
             "technical_replicates"))%>%
+  group_by(sample_code)%>%
+  mutate(ra = xic/sum(xic))%>%
+  ungroup()%>%
+  group_by(feature_number)%>%
+  filter(max(ra) >= 0.001)%>%
+  ungroup()%>%
+  select(-ra)%>%
   group_by(feature_number)%>%
   filter(sum(xic) != 0)%>%
   ungroup()%>%
   spread(sample_code, xic)
 
-Env_compare <- inner_join(Piers_features, CCE_features)
+Env_compare <- inner_join(Piers_features, CCE_features, by = 'feature_number')
 
 length(Env_compare$feature_number)
 

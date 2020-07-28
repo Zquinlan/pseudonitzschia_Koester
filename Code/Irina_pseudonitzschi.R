@@ -1034,7 +1034,7 @@ cyto_full <- cyto_exp2_org%>%
 write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
 
 
-# VISUALIZATION -- VENN DIAGRAM features-------------------------------------------
+# VISUALIZATION -- Venn Diagramfeatures-------------------------------------------
 CCE_compare <- cyto_base%>%
   filter(Experiment == "CCE-P1706")%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
@@ -1118,21 +1118,43 @@ Env_compare <- inner_join(Piers_features, CCE_features, by = 'feature_number')
 
 length(Env_compare$feature_number)
 
-# VISUALIZATIONS -- Venn Diagram ASV --------------------------------------
+
+# VISUALIZATION -- Venn Diagram ASV  --------------------------------------
 otu_vis <- otu_stats%>%
   separate(sample_code_16S, c("Experiment", "Organism", 
                               "biological_replicates", "technical_replicates"), sep = "_")%>%
-  filter(Experiment == "Exp2")%>%
   group_by(Taxonomy)%>%
   filter(sum(asin) != 0)%>%
-  ungroup()%>%
-  group_by(Organism, Taxonomy)%>%
-  summarize_if(is.numeric, mean)%>%
-  ungroup()%>%
-  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
-  unite(tax, c('Class', 'Family'), sep = '; ', remove = FALSE)%>%
-  mutate(Organism = gsub('Pn-', '', Organism))
+  ungroup()
 
+asv_env <- otu_vis%>%
+  filter(Experiment == "CCE-P1706")%>%
+  unite(sample_code, c("Experiment", "Organism", 
+                       "biological_replicates", "technical_replicates"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  filter(max(ra) >= 0.0001)%>%
+  ungroup()%>%
+  select(-c(reads, asin))%>%
+  spread(sample_code, ra)
+
+asv_exp2 <- otu_vis%>%
+  filter(Experiment == "Exp2")%>%
+  unite(sample_code, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  filter(max(ra) >= 0.0001)%>%
+  ungroup()%>%
+  select(-c(reads, asin))%>%
+  spread(sample_code, ra)
+
+length(asv_exp2$Taxonomy)
+length(asv_env$Taxonomy)
+
+asv_overlap <- inner_join(asv_env, asv_exp2, by = 'Taxonomy')
+
+length(asv_overlap$Taxonomy)
+
+# VISUALIZATIONS -- Class/Family stacked bar chart--------------------------------------
 #Defining the colors for the Class/Family plot
 #First 3 are Alpha's = orangy red
 #1 Bacterioplankton = green
@@ -1142,6 +1164,13 @@ colors_taxonomy <- c("#F3A300", "#F69100", "#BCAA1E",
                      blues9)
 
 otu_vis%>%  
+  filter(Experiment == "Exp2")%>%
+  group_by(Organism, Taxonomy)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  unite(tax, c('Class', 'Family'), sep = '; ', remove = FALSE)%>%
+  mutate(Organism = gsub('Pn-', '', Organism))%>%
   ggplot(aes(Organism, ra, fill = tax)) +
   geom_bar(stat = 'identity', position = 'stack') +
   scale_fill_manual(values = colors_taxonomy) +
@@ -1156,9 +1185,6 @@ otu_vis%>%
         legend.background = element_rect(fill = "transparent"), # get rid of legend bg
         legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
         axis.line = element_line(color="black"))
-  
-  
-  
 
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------

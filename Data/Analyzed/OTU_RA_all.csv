@@ -1,50 +1,48 @@
 Taxonomy,Exp2_Pn-delicatissima_A_I,Exp2_Pn-delicatissima_B_I,Exp2_Pn-galaxiae_A_I,Exp2_Pn-galaxiae_B_I,Exp2_Pn-hasleana_A_I,Exp2_Pn-hasleana_B_I,Exp2_Pn-multiseries_A_I,Exp2_Pn-multiseries_B_I,Exp2_Pn-subpacifica_A_I,Exp2_Pn-subpacifica_B_I
 Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;2568,0,0,0,0,0.054672799498222874,0.10993843447669305,0,0,0,0
-Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Maribacter;2321,0.0010887316276537834,0.0015746260263187492,0,0,0,0,0,0,0,0
-Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Polaribacter 4;7037,0.06899836690255852,0.08727927117309639,0,0,0,0,0.03665734700217459,0.02977761025254429,0.00417910447761194,0.003572576224410714
-Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Winogradskyella;1626,0.11404463799673381,0.15150151838938253,0,0,0,0,0.008698353525939733,0.010554089709762533,0,0
+Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Maribacter;2321,0.001089472967451995,0.0015746260263187492,0,0,0,0,0,0,0,0
+Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Polaribacter 4;7037,0.06904534931227019,0.08727927117309639,0,0,0,0,0.03665734700217459,0.02977761025254429,0.00417910447761194,0.003572576224410714
+Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Winogradskyella;1626,0.11412229334059648,0.15150151838938253,0,0,0,0,0.008698353525939733,0.010554089709762533,0,0
 Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Winogradskyella;484,0,0,0,0,0.006585824796153042,0,0,0,0,0
 Bacteria;Bacteroidetes;Bacteroidia;Flavobacteriales;Flavobacteriaceae;Winogradskyella;7920,0,0,0,0,0.20823750784026762,0.23966578715919085,0,0,0,0
-Bacteria;Cyanobacteria;Oxyphotobacteria;Nostocales;Phormidiaceae;Tychonema CCAP 1459-11B;6048,6.804572672836146e-4,0,0,0,0,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;7309,0,0,0,0,0,0,0,0.0024500565397663023,0,0
-Bacteria;Proteobacteria;Alphaproteobacteria;Caulobacterales;Hyphomonadaceae;Hyphomonas;9037,0.0010887316276537834,3.374198627825891e-4,0,0,0,0,0.003727865796831314,0.0041462495288352805,0.00204241948153967,0.0022493998449993383
-Bacteria;Proteobacteria;Alphaproteobacteria;Caulobacterales;Hyphomonadaceae;Litorimonas;uncultured marine bacterium;4616,0.006124115405552531,0.010797435609042852,0,0,0,0,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Caulobacterales;Hyphomonadaceae;Hyphomonas;9037,0.001089472967451995,3.374198627825891e-4,0,0,0,0,0.003727865796831314,0.0041462495288352805,0.00204241948153967,0.0022493998449993383
+Bacteria;Proteobacteria;Alphaproteobacteria;Caulobacterales;Hyphomonadaceae;Litorimonas;uncultured marine bacterium;4616,0.006128285441917472,0.010797435609042852,0,0,0,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;1036,0,0,0,0,0,0,0,0,2.199528672427337e-4,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;1503,0,0,0,0,0,0,0.05809257533395464,0.03260459856765925,0,0
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;3349,0.3331518780620577,0.31458778540096727,0,0,0,0,0,0,0.01659073055773763,0.02222936317411111
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;3349,0.3333787280403105,0.31458778540096727,0,0,0,0,0,0,0.01659073055773763,0.02222936317411111
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;3835,0,0,0,0,0,0,0,0.0022615906520919715,8.16967792615868e-4,7.939058276468253e-4
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;6355,0,0,0.00996523754345307,0.014139590854392299,0,0,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;6355,0,0,0.00996523754345307,0.01415236374585968,0,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;7937,0,1.1247328759419637e-4,0,0,0,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;8702,0,0,0,0,0,0,0,0,4.08483896307934e-4,0
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;8714,0.011023407729994557,0.010347542458666066,0,0,0,0,0.03883193538365952,0.03562005277044855,0.0020109976433621366,0.0030622081923520404
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;8819,5.443658138268917e-4,0,0,0,0,0,0,0,0,0
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;9404,0.010887316276537834,0,0,0,0,0,0,0,0,0
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Jannaschia;uncultured Thalassobacter sp.;6889,0,0,0.46141367323290844,0.3778580024067389,0.4276604641438428,0.30826737027264733,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;8714,0.011030913795451451,0.010347542458666066,0,0,0,0,0.03883193538365952,0.03562005277044855,0.0020109976433621366,0.0030622081923520404
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;8819,5.447364837259975e-4,0,0,0,0,0,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;9404,0.010894729674519951,0,0,0,0,0,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Jannaschia;uncultured Thalassobacter sp.;6889,0,0,0.46141367323290844,0.37819933754893104,0.4276604641438428,0.30826737027264733,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Jannaschia;uncultured Thalassobacter sp.;8570,0,0,0,0,0.009826468743466444,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Loktanella;Thalassobium sp. R2A62;6007,0,4.498931503767855e-4,0,0,6.272214091574326e-4,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Nereida;6637,0,0,0,0,0,0,0,0,0,7.939058276468253e-4
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Pseudophaeobacter;2713,0,0,0,0,0,0,0.046598322460391424,0.04768186958160573,0,3.5914787441165906e-4
-Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Sulfitobacter;4056,0,0,0.0032444959443800694,0.003309265944645006,0,0,0,0,0,0
+Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Sulfitobacter;4056,0,0,0.0032444959443800694,0.00331225534477567,0,0,0,0,0,0
 Bacteria;Proteobacteria;Alphaproteobacteria;Rhodobacterales;Rhodobacteraceae;Sulfitobacter;7316,0,0,0,0,0,0,0,0,0,6.615881897056877e-4
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;6896,0,0,0,0,8.3629521220991e-4,0,0,0,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;2682,0,0,0,0,0.018293957767091782,0,0,0,0,0
-Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;3399,0.10247686445291236,0.10178832527274773,0.42363847045191194,0.4581829121540313,0,0,0,0,0.7000785545954439,0.7228134510330227
-Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;376,0,0,0.07161066048667439,0.09265944645006016,0,0,0,0,0,0
+Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;3399,0.10254664306141904,0.10178832527274773,0.42363847045191194,0.45859680819030413,0,0,0,0,0.7000785545954439,0.7228134510330227
+Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;376,0,0,0.07161066048667439,0.09274314965371876,0,0,0,0,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;4061,0,0,0,0,0,0,0,0,0,3.213428349999055e-4
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;4531,0,0,0,0,0.017875810160986827,0.028144239226033423,0,0,0,0
-Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;493,0.2025040827436037,0.17455854234619278,0,0,0.19433409993727785,0.2546174142480211,0,0,0.005153181461115475,0.0035536737047048373
+Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;493,0.2026419719460711,0.17455854234619278,0,0,0.19433409993727785,0.2546174142480211,0,0,0.005153181461115475,0.0035536737047048373
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;641,0,0,0,0,0.005749529583943132,0,0,0,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;Alteromonas;2666,0,0,0,0,0,0,0,0,0.12741555380989789,0.10475776420996918
 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;Alteromonas;3023,0,0,0,0,0,0,0,0,0.016936370777690495,0.02016898852617054
-Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;Alteromonas;592,0.03756124115405553,0.0404903835339107,0,0,0.03470625130671127,0.03737906772207564,0,0,0,0
+Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Alteromonadaceae;Alteromonas;592,0.03758681737709383,0.0404903835339107,0,0,0.03470625130671127,0.03737906772207564,0,0,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Betaproteobacteriales;Burkholderiaceae;Limnobacter;1852,0,0,0,0,0,0,0,0,0,0.0011530537020584845
-Bacteria;Proteobacteria;Gammaproteobacteria;Betaproteobacteriales;Burkholderiaceae;Limnobacter;45,0.0025857376156777356,0.006410977392869194,0,0,0,0,0.1043802423112768,0.15114964191481342,0.03321288295365279,0.0464245883976334
+Bacteria;Proteobacteria;Gammaproteobacteria;Betaproteobacteriales;Burkholderiaceae;Limnobacter;45,0.0025874982976984884,0.006410977392869194,0,0,0,0,0.1043802423112768,0.15114964191481342,0.03321288295365279,0.0464245883976334
 Bacteria;Proteobacteria;Gammaproteobacteria;Betaproteobacteriales;Methylophilaceae;OM43 clade;3485,0,0,0,0,0,0,0.012115563839701771,0.02148511119487373,0.032710133542812256,0.03710564618263615
 Bacteria;Proteobacteria;Gammaproteobacteria;Cellvibrionales;Cellvibrionaceae;Umboniibacter;uncultured bacterium;7259,0,0,0,0,0.00167259042441982,0.0030782761653474055,0,0,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Marinomonadaceae;Marinomonas;3263,0,0,0,0,0.012335354380096175,0.018909410729991204,0,0,0,0
-Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Marinomonadaceae;Marinomonas;6323,0.09553620032661948,0.09267798897761781,0.030127462340672075,0.052948255114320095,0.006585824796153042,0,0,0,0.02447761194029851,0.007995765835585884
+Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Marinomonadaceae;Marinomonas;6323,0.09560125289391257,0.09267798897761781,0.030127462340672075,0.05299608551641072,0.006585824796153042,0,0,0,0.02447761194029851,0.007995765835585884
 Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Nitrincolaceae;Neptuniibacter;3841,0,0,0,0,0,0,0,0.016773464003015454,0,0
 Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Nitrincolaceae;Neptuniibacter;5936,0,0,0,0,0,0,0.5837216526871699,0.5478703354692801,0.013605655930871955,0.006124416384704081
-Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Oleiphilaceae;Oleiphilus;2747,0.009390310288513882,0.005511191092115623,0,0,0,0,0.05374339857098478,0.034489257444402566,0.00983503534956795,0.005443925675292517
-Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Pseudohongiellaceae;Pseudohongiella;4940,0.0023135547087642897,0.0015746260263187492,0,0,0,0,0.0534327430879155,0.06313607237090087,0.01030636292223095,0.010415288357938113
-Eukaryota;SAR;Stramenopiles;Ochrophyta;Bacillariophyceae;Pseudo-nitzschia;3610,0,0,0,9.025270758122744e-4,0,0,0,0,0,0
+Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Oleiphilaceae;Oleiphilus;2747,0.009396704344273457,0.005511191092115623,0,0,0,0,0.05374339857098478,0.034489257444402566,0.00983503534956795,0.005443925675292517
+Bacteria;Proteobacteria;Gammaproteobacteria;Oceanospirillales;Pseudohongiellaceae;Pseudohongiella;4940,0.0023151300558354898,0.0015746260263187492,0,0,0,0,0.0534327430879155,0.06313607237090087,0.01030636292223095,0.010415288357938113

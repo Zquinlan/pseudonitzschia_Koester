@@ -1034,7 +1034,7 @@ cyto_full <- cyto_exp2_org%>%
 write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
 
 
-# VISUALIZATION -- VENN DIAGRAM -------------------------------------------
+# VISUALIZATION -- VENN DIAGRAM features-------------------------------------------
 CCE_compare <- cyto_base%>%
   filter(Experiment == "CCE-P1706")%>%
   select(-c('chl', 'ra', 'asin', 'chl_norm',"Experiment", "Organism", 
@@ -1117,6 +1117,49 @@ Piers_features <- cyto_base%>%
 Env_compare <- inner_join(Piers_features, CCE_features, by = 'feature_number')
 
 length(Env_compare$feature_number)
+
+# VISUALIZATIONS -- Venn Diagram ASV --------------------------------------
+otu_vis <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()%>%
+  group_by(Organism, Taxonomy)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  unite(tax, c('Class', 'Family'), sep = '; ', remove = FALSE)%>%
+  mutate(Organism = gsub('Pn-', '', Organism))
+
+#Defining the colors for the Class/Family plot
+#First 3 are Alpha's = orangy red
+#1 Bacterioplankton = green
+#9 Gammaproteobacteria = purple:blue
+colors_taxonomy <- c("#F3A300", "#F69100", "#BCAA1E",
+                     "#50A45C",
+                     blues9)
+
+otu_vis%>%  
+  ggplot(aes(Organism, ra, fill = tax)) +
+  geom_bar(stat = 'identity', position = 'stack') +
+  scale_fill_manual(values = colors_taxonomy) +
+  theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+        axis.title.x = element_text(size=14, face="bold", color = 'black'),
+        axis.title.y = element_text(size=14, face="bold", color = 'black'),
+        axis.text.x = element_text(face="bold", angle = 60, hjust = 1, size=14, color = 'black'),
+        axis.text.y = element_text(face="bold", size=14, color = 'black'),
+        panel.grid.major = element_blank(), # get rid of major grid
+        panel.grid.minor = element_blank(), # get rid of minor grid
+        legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+        legend.box.background = element_rect(fill = "transparent"), # get rid of legend panel bg
+        axis.line = element_line(color="black"))
+  
+  
+  
+
 
 # VISUALIZATION -- PCoA org and unfilfil -------------------------------------------------
 ##Quant all

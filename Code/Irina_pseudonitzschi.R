@@ -181,7 +181,7 @@ otu_clean <- otu_df%>%
   gather(sample_code_16S, reads, 3:ncol(.))%>%
   #separate(sample_code_16S, c("Experiment", "Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
   #unite(sample_name, c("Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
-  unite(Taxonomy, c("Taxon", "otu_number"), sep = ";")%>%
+  unite(Taxonomy, c("otu_number", "Taxon"), sep = ";")%>%
   filter(!Taxonomy %like any% c('%Eukaryota%', '%Cyanobacteria%'))
 
 
@@ -196,7 +196,7 @@ otu_stats <- otu_clean%>%
   ungroup()
 
 family_stats <- otu_clean%>%
-  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  separate(Taxonomy, c("otu_number", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus"), sep = ";")%>%
   select(-c("Genus", "otu_number"))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family"), sep = ";")%>%
   mutate(Taxonomy = gsub(';NA', '', Taxonomy))%>%
@@ -213,7 +213,7 @@ family_stats <- otu_clean%>%
 
 
 class_stats <- otu_clean%>%
-  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  separate(Taxonomy, c("otu_number", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus"), sep = ";")%>%
   select(-c("Order", "Family", "Genus", "otu_number"))%>%
   unite(Taxonomy, c("Kingdom", "Phylum", "Class"), sep = ";")%>%
   mutate(Taxonomy = gsub(';NA', '', Taxonomy))%>%
@@ -1165,10 +1165,13 @@ colors_taxonomy <- c("#F3A300", "#F69100", "#BCAA1E",
 
 otu_vis%>%  
   filter(Experiment == "Exp2")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(reads) > 0)%>%
+  ungroup()%>%
   group_by(Organism, Taxonomy)%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
-  separate(Taxonomy, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "otu_number"), sep = ";")%>%
+  separate(Taxonomy, c("otu_number", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus"), sep = ";")%>%
   unite(tax, c('Class', 'Family'), sep = '; ', remove = FALSE)%>%
   mutate(Organism = gsub('Pn-', '', Organism))%>%
   ggplot(aes(Organism, ra, fill = tax)) +

@@ -92,7 +92,7 @@ sample_rename_16S <- read_csv("./Raw/Rename_16S_SampleIDs.csv")%>%
   rename(sample_code_16S_old = ID_16S,
          sample_code_16S = ID_16S_new)
 
-otu_taxonomy <- read_tsv("./Raw/Pn_16S_no-plastids_taxonomy.tsv")%>%
+otu_taxonomy <- read_csv("./Raw/Pn_16S_no-plastids_taxonomy_fixed.csv")%>%
   rename("#OTU ID" = "Feature ID")
 
 otu_df <- read_csv("./Raw/no-plastids-dada2-table.csv")%>%
@@ -204,11 +204,12 @@ family_stats <- otu_clean%>%
   summarize_if(is.numeric, sum)%>%
   ungroup()%>%
   group_by(sample_code_16S)%>%
-  mutate(ra = reads/sum(reads, na.rm = TRUE))%>%
+  mutate(ra = reads/sum(reads, na.rm = TRUE),
+  asin = asin(sqrt(ra)))%>%
   group_by(Taxonomy)%>%
   mutate(mean = mean(ra, na.rm = TRUE),
          sd = sd(ra, na.rm = TRUE))%>%
-  select(-c(reads, ra))%>%
+  #select(-c(reads, ra))%>%
   unique()
 
 
@@ -221,11 +222,12 @@ class_stats <- otu_clean%>%
   summarize_if(is.numeric, sum)%>%
   ungroup()%>%
   group_by(sample_code_16S)%>%
-  mutate(ra = reads/sum(reads))%>%
+  mutate(ra = reads/sum(reads),
+         asin = asin(sqrt(ra)))%>%
   group_by(Taxonomy)%>%
   mutate(mean = mean(ra, na.rm = TRUE),
          sd = sd(ra, na.rm = TRUE))%>%
-  select(-c(reads, ra))%>%
+  #select(-c(reads, ra))%>%
   unique()
 
 
@@ -243,13 +245,13 @@ otu_tableSI <- otu_stats%>%
   group_by(Experiment, Taxonomy)%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates",
                        "technical_replicates"), sep = "_")%>%
-  select(-c(reads, asin))%>%
-  spread(sample_name, ra)
+  select(-c(ra, asin))%>%
+  spread(sample_name, reads)
 
 all_otu <- otu_tableSI$Taxonomy%>%
   as.vector()
 
-write_csv(otu_tableSI, "Analyzed/OTU_RA_all.csv")
+write_csv(otu_tableSI, "Analyzed/OTU_Reads_all.csv")
 
 # STATS -- SET SEED -------------------------------------------------------
 set.seed(295034) # Setting the seed before we do any stats
@@ -726,7 +728,52 @@ write_csv(feature_info_test_dom, "Analyzed/Ttest_elements_dom.csv")
 
 # STATS Correlation analysis ----------------------------------------------
 ## Correlation analysis
-## Doing this between OTU and multiplied matrix
+## Doing this between OTU all and multiplied matrix
+correlation_matrix_classes <- matrix_multiplied_org%>%
+  gather(compound, val, 2:ncol(.))%>%
+  mutate(compound = gsub("[[:space:]]", ".", compound))%>%
+  mutate(compound = gsub("-", ".", compound))%>%
+  filter(compound %in% important_org_compounds)%>%
+  spread(compound, val)%>%
+  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil",
+                          "technical_replicates"), sep = "_")%>%
+  select(-c(Experiment, technical_replicates))%>%
+  group_by(Organism, biological_replicates, DOM_fil)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()
+
+correlation_microbe_all <- otu_stats%>%
+  filter(sample_code_16S %like% "%Exp2%")%>%
+  rename('sample_name' = 'sample_code_16S')%>%
+  filter(Taxonomy %like any% all_otu)%>%
+  select(-c(reads, ra))%>%
+  spread(Taxonomy, asin)
+
+correlation_table_classes <- correlation_matrix_classes%>%
+  filter(DOM_fil != 'Unfil')%>%
+  mutate(Experiment = 'Exp2')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
+  left_join(correlation_microbe_all%>%
+              mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
+  gather(microbe, microbe_asin, contains(";"))%>%
+  gather(category, category_asin, 3:32)
+
+
+correlation_pvals_classes <- correlation_table_classes%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  ungroup()%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
+
+write_csv(correlation_pvals_classes, "Analyzed/correlation_analysis_otuAll_classes.csv")
+
+## Doing this between OTU 29 sig and multiplied matrix
 correlation_matrix_classes <- matrix_multiplied_org%>%
   gather(compound, val, 2:ncol(.))%>%
   mutate(compound = gsub("[[:space:]]", ".", compound))%>%
@@ -747,7 +794,7 @@ correlation_microbe_Top29 <- otu_stats%>%
   select(-c(reads, ra))%>%
   spread(Taxonomy, asin)
 
-correlation_table_classes <- correlation_matrix_classes%>%
+correlation_table_Top29_classes <- correlation_matrix_classes%>%
   filter(DOM_fil != 'Unfil')%>%
   mutate(Experiment = 'Exp2')%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
@@ -757,7 +804,7 @@ correlation_table_classes <- correlation_matrix_classes%>%
   gather(category, category_asin, 3:32)
 
 
-correlation_pvals_classes <- correlation_table_classes%>%
+correlation_pvals_Top29_classes <- correlation_table_Top29_classes%>%
   ungroup()%>%
   group_by(DOM_fil, microbe, category)%>%
   filter(sum(category_asin) > 0)%>%
@@ -769,12 +816,75 @@ correlation_pvals_classes <- correlation_table_classes%>%
   ungroup()%>%
   mutate(FDR = p.adjust(p.value, method = "BH"))
 
-write_csv(correlation_pvals_classes, "Analyzed/correlation_analysis_classes.csv")
+write_csv(correlation_pvals_Top29_classes, "Analyzed/correlation_analysis_otu29_classes.csv")
 
+## Doing this between OTU families and multiplied matrix
+correlation_microbe_family <- family_stats%>%
+  filter(sample_code_16S %like% "%Exp2%")%>%
+  filter(sum(asin) != 0)%>%
+  rename('sample_name' = 'sample_code_16S')%>%
+  select(-c(reads, ra, mean, sd))%>%
+  spread(Taxonomy, asin)
+
+correlation_table_family_classes <- correlation_matrix_classes%>%
+  filter(DOM_fil != 'Unfil')%>%
+  mutate(Experiment = 'Exp2')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
+  left_join(correlation_microbe_family%>%
+              mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
+  gather(microbe, microbe_asin, contains(";"))%>%
+  gather(category, category_asin, 3:32)
+
+
+correlation_pvals_family_classes <- correlation_table_family_classes%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  ungroup()%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
+
+write_csv(correlation_pvals_family_classes, "Analyzed/correlation_analysis_family_classes.csv")
+
+## Doing this between OTU classes and multiplied matrix
+
+correlation_microbe_class <- class_stats%>%
+  filter(sample_code_16S %like% "%Exp2%")%>%
+  filter(sum(asin) != 0)%>%
+  rename('sample_name' = 'sample_code_16S')%>%
+  select(-c(reads, ra, mean, sd))%>%
+  spread(Taxonomy, asin)
+
+correlation_table_class_classes <- correlation_matrix_classes%>%
+  filter(DOM_fil != 'Unfil')%>%
+  mutate(Experiment = 'Exp2')%>%
+  unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
+  left_join(correlation_microbe_class%>%
+              mutate(sample_name = gsub('.{2}$', "", sample_name)), by = "sample_name")%>%
+  gather(microbe, microbe_asin, contains(";"))%>%
+  gather(category, category_asin, 3:32)
+
+
+correlation_pvals_class_classes <- correlation_table_class_classes%>%
+  ungroup()%>%
+  group_by(DOM_fil, microbe, category)%>%
+  filter(sum(category_asin) > 0)%>%
+  nest()%>%
+  mutate(corr = map(data, ~ cor.test(.x$category_asin, .x$microbe_asin, method = "pearson")%>%
+                      broom::tidy()))%>%
+  dplyr::select(-data)%>%
+  unnest(corr)%>%
+  ungroup()%>%
+  mutate(FDR = p.adjust(p.value, method = "BH"))
+
+write_csv(correlation_pvals_class_classes, "Analyzed/correlation_analysis_class_classes.csv")
 
 ## Correlation analysis
 ## Doing this between OTU and LibIDs
-
 correlation_quant_LibID <- quant_stats%>%
   unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
                    "technical_replicates"), sep = "_")%>%
@@ -788,7 +898,6 @@ correlation_quant_LibID <- quant_stats%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
   select(Organism, biological_replicates, DOM_fil, "1795", "1855", "3988", "4471", "4582", "864", "5432", "5563", "6693", "3667", "4075", "7249", "4580", "8081")
-  
 
 
 correlation_microbe_all <- otu_stats%>%
@@ -1159,10 +1268,15 @@ length(asv_overlap$Taxonomy)
 #First 3 are Alpha's = orangy red
 #1 Bacterioplankton = green
 #9 Gammaproteobacteria = purple:blue
-colors_taxonomy <- c("#F3A300", "#F69100", "#BCAA1E",
-                     "#50A45C",
-                     blues9)
+if (!require("RColorBrewer")) install.packages("RColorBrewer")
+library(RColorBrewer)
+brewer.pal.info
 
+colors_taxonomy <- c("#f27304", "#F68F1D", "#FAAC35",
+                     "#2d67c7",
+                     "#7C28A8", "#ae2da9",
+                     "#75D648","#68C946","#5BBC43","#4EAF41","#40A13E","#33943C","#268739")
+##greybrown757761, purplemix 952BA9
 otu_vis%>%  
   filter(Experiment == "Exp2")%>%
   group_by(Taxonomy)%>%

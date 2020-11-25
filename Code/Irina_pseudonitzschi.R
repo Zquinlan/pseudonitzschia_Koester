@@ -11,10 +11,10 @@ library(tidyverse)
 library(data.table)
 library(DescTools)
 library(broom)
-library(readxl)
 library(multcomp)
 library(CHNOSZ)
 library(randomForest)
+library(readxl)
 
 # PCoA and visualizations
 library(vegan)
@@ -83,6 +83,7 @@ lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
 cat_df <- read_csv("./Raw/Input_Canopus.csv")
 
 chl <- read_xlsx("Raw/Pn_Ex2_Chlorophyll.xlsx")
+chl <- read_csv("Raw/Pn_Ex2_Chlorophyll.csv")
 
 feature_info <- read_csv("./Raw/ZODIAC_ElementalComposition_input.csv")%>%
   rename(feature_number = 1)%>%
@@ -297,7 +298,7 @@ quant_permanova_org <- quant_stats%>%
 ##still needs to be finished....
 
 
-  # STATS PERMANOVA - ASV  ---------------------------------------------------
+# STATS PERMANOVA - ASV  ---------------------------------------------------
 
 # STATS ANOVA -- Quant One-way -------------------------------------------------------------------
 aov_pvalues <- quant_stats%>%
@@ -367,6 +368,7 @@ important_quant_org <- (rf_quant_org_mda%>%
                           filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
   as.vector()
 
+
 write_csv(rf_quant_org_mda, "Analyzed/RF_quant_organism.csv")
 
 # STATS RANDOM FOREST -- QUANT unfilfil  -----------------------------------------
@@ -426,9 +428,10 @@ important_org_otu <- (otu_rf_mda%>%
                         mutate(feature = gsub("_", ";", feature),
                                feature = gsub("SPACE", " ", feature),
                                feature = gsub("LINE", "-", feature))%>%
-                        filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy + sd(MeanDecreaseAccuracy))))$feature%>%
+                        filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
   unique()%>%
   as.vector()
+
 
 write_csv(otu_rf_mda, "Analyzed/Otu_rf_mda.csv")
 
@@ -553,6 +556,7 @@ cat_clean_org <- cat_prob%>%
   select(important_canopus_org)%>%
   data.matrix(rownames.force = NA)
 
+write.csv(cat_clean_org,"./Analyzed/cat_clean_org.csv")
 
 canopus_available_features_org <- rownames(cat_clean_org)%>% as.vector()
 
@@ -576,12 +580,15 @@ quant_binary_org <-  quant_binary_org_df%>%
 write.csv(quant_binary_org,"./Analyzed/quant_binary_org.csv")
 
 
+
 # PRE-MATRIX QUANT AND CAT -- DOM_Fil ---------------------------------------------
 cat_clean_dom <- cat_prob%>%
   filter(FeatureID %in% important_quant_dom)%>%
   column_to_rownames("FeatureID")%>%
   select(important_canopus_dom)%>%
   data.matrix(rownames.force = NA)
+
+write.csv(cat_clean_dom,"./Analyzed/cat_clean_dom.csv")
 
 canopus_available_features_dom <- rownames(cat_clean_dom)%>% as.vector()
 
@@ -680,7 +687,7 @@ matrix_permanova_org <- matrix_multiplied_org%>%
 
 permanova_matrix_org <- matrix_permanova_org%>%
   # column_to_rownames("sample_code")%>%
-  adonis(.[7:ncol(.)] ~ Organism*DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
+  adonis(.[7:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
 
 permanova_matrix_org
 
@@ -692,7 +699,7 @@ matrix_permanova_dom <- matrix_multiplied_dom%>%
 
 permanova_matrix_dom <- matrix_permanova_dom%>%
   # column_to_rownames("sample_code")%>%
-  adonis(.[7:ncol(.)] ~ Organism*DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
+  adonis(.[7:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
 
 permanova_matrix_dom
 
@@ -752,32 +759,22 @@ top3_org <- (rf_matrix$importance%>%
 important_matrix_org <- (rf_matrix$importance%>% 
                            as.data.frame()%>%
                            rownames_to_column("feature")%>%
+                           filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
+  unique()%>%
+  as.vector()
+
+important_matrix_org <- (rf_matrix$importance%>% 
+                           as.data.frame()%>%
+                           rownames_to_column("feature")%>%                         
                           filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy)))$feature%>%
   as.vector()
 
 
 rf_matrix_mda_org <- rf_matrix$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")%>%
-  mutate(mean_decrease_important = case_when(feature %like any% top30_org ~ "important",
-                                             TRUE ~ "not important"),
-         multiseries_important = case_when(`Pn-multiseries` >= (top_n(., 10, `Pn-multiseries`)%>%
-                                                             arrange(-`Pn-multiseries`))$`Pn-multiseries`[10]~ "important",
-                                           TRUE ~ "not important"),
-         delicatissima_important = case_when(`Pn-delicatissima` >= (top_n(., 10, `Pn-delicatissima`)%>%
-                                                             arrange(-`Pn-delicatissima`))$`Pn-delicatissima`[10]~ "important",
-                                           TRUE ~ "not important"),
-         galaxiae_important = case_when(`Pn-galaxiae` >= (top_n(., 10, `Pn-galaxiae`)%>%
-                                                             arrange(-`Pn-galaxiae`))$`Pn-galaxiae`[10]~ "important",
-                                           TRUE ~ "not important"),
-         hasleana_important = case_when(`Pn-hasleana` >= (top_n(., 10, `Pn-hasleana`)%>%
-                                                             arrange(-`Pn-hasleana`))$`Pn-hasleana`[10]~ "important",
-                                           TRUE ~ "not important"),
-         subpacifica_important = case_when(`Pn-subpacifica` >= (top_n(., 10, `Pn-subpacifica`)%>%
-                                                          arrange(-`Pn-subpacifica`))$`Pn-subpacifica`[10]~ "important",
-                                           TRUE ~ "not important"))
+  rownames_to_column("feature")
 
-write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.05.csv")
+write_csv(rf_matrix_mda_org,"./Analyzed/RF_matrix_organism_mda.csv")
 
 ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
@@ -881,7 +878,7 @@ correlation_table_classes <- correlation_matrix_classes%>%
   select(-DOM_fil)%>% 
   left_join(correlation_microbe_all, by = "sample_name")%>%
   gather(microbe, microbe_asin, contains(";"))%>%
-  gather(category, category_asin, 2:40)
+  gather(category, category_asin, 2:19)
 
 
 correlation_pvals_classes <- correlation_table_classes%>%
@@ -917,7 +914,7 @@ correlation_table_family_classes <- correlation_matrix_classes%>%
   select(-DOM_fil)%>% 
   left_join(correlation_microbe_family, by = "sample_name")%>%
   gather(microbe, microbe_asin, contains(";"))%>%
-  gather(category, category_asin, 2:40)
+  gather(category, category_asin, 2:19)
 
 
 correlation_pvals_family_classes <- correlation_table_family_classes%>%
@@ -951,9 +948,9 @@ correlation_table_class_classes <- correlation_matrix_classes%>%
   mutate(Experiment = 'Exp2')%>%
   unite(sample_name, c("Experiment", "Organism", "biological_replicates"), sep = "_")%>%
   select(-DOM_fil)%>% 
-  left_join(correlation_microbe_family, by = "sample_name")%>%
+  left_join(correlation_microbe_class, by = "sample_name")%>%
   gather(microbe, microbe_asin, contains(";"))%>%
-  gather(category, category_asin, 2:40)
+  gather(category, category_asin, 2:19)
 
 
 correlation_pvals_class_classes <- correlation_table_class_classes%>%
@@ -1281,10 +1278,9 @@ boxplot_N_binary_perc <- quant_binary_org_df%>%
 boxplot_N_binary_perc%>%
   ggplot(aes(Organism, data)) + 
   geom_hline(yintercept =0.613) + 
-  geom_boxplot() #+
-#facet_wrap(~DOM_fil)
+  geom_boxplot() +
+facet_wrap(~DOM_fil)
 
-plot(boxplot_N_binary)
 
 # VISUALIZATION -- Boxplots binary-------------------------------------------
 boxplot_N_binary <- quant_binary_org_df%>%
@@ -1587,7 +1583,7 @@ pcoa_otu_Exp2$values[1:10,]%>%
 
 ## Organism Matrix
 pcoa_org <- matrix_multiplied_org%>%
-  gather(cat, val, 2:ncol(.))%>%
+  #gather(cat, val, 2:ncol(.))%>%
   #mutate(val = val+ min(val) +1)%>%
   #spread(cat, val)%>%
   column_to_rownames("sample_code")%>%
@@ -1705,7 +1701,7 @@ pcoa_org$vectors%>%
   pcoa_settings() +
   ylab(str_c("Axis 2", " (", round(pcoa_org$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
   xlab(str_c("Axis 1", " (", round(pcoa_org$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
-  ggtitle("Organism 0.05")
+  ggtitle("Matrix: Culture")
 
 pcoa_dom$vectors%>%
   as.data.frame()%>%
@@ -1715,7 +1711,7 @@ pcoa_dom$vectors%>%
   pcoa_settings() +
   ylab(str_c("Axis 2", " (", round(pcoa_dom$values$Relative_eig[2], digits = 4)*100, "%)", sep = "")) +
   xlab(str_c("Axis 1", " (", round(pcoa_dom$values$Relative_eig[1], digits = 4)*100, "%)", sep = "")) +
-  ggtitle("UnfilFil 0.05")
+  ggtitle("Matrix: UnfilFil")
 dev.off()
 
 
@@ -1735,7 +1731,7 @@ mda_theme <- theme(panel.background = element_rect(fill = "transparent"), # bg o
 pdf("./Plots/Mean_Decrease_Accuracy.pdf", height = 5, width = 7)
 ggplot(rf_quant_org_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("Organism QUANT Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("Organism QUANT Mean Decrease Accuracy") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
   geom_hline(yintercept = (mean(rf_quant_org_mda$MeanDecreaseAccuracy + sd(rf_quant_org_mda$MeanDecreaseAccuracy))),
@@ -1744,7 +1740,7 @@ ggplot(rf_quant_org_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
 
 ggplot(rf_quant_dom_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("DOM Quant Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("DOM Quant Mean Decrease Accuracy") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
   geom_hline(yintercept = (mean(rf_quant_org_mda$MeanDecreaseAccuracy + sd(rf_quant_org_mda$MeanDecreaseAccuracy))),
@@ -1753,28 +1749,26 @@ ggplot(rf_quant_dom_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Mea
 
 ggplot(otu_rf_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("OTU Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("OTU Mean Decrease Accuracy") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
   mda_theme
 
 ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("Organism Matrix Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("Organism Matrix Mean Decrease Accuracy") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = (top_n(rf_matrix_mda_org, 30, MeanDecreaseAccuracy)%>%
-               arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
+  geom_hline(yintercept = (mean(rf_matrix_mda_org$MeanDecreaseAccuracy)),
              col = "red") +
   mda_theme
 
 ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity") +
-  ggtitle("FilUnfil Matrix Mean Decrease Accuracy pval = 0.05") +
+  ggtitle("FilUnfil Matrix Mean Decrease Accuracy") +
   xlab("Features (decreasing mda)") +
   ylab("Mean Decrease Accuracy") +
-  geom_hline(yintercept = (top_n(rf_matrix_UnfilFil_mda, 30, MeanDecreaseAccuracy)%>%
-               arrange(-MeanDecreaseAccuracy))$MeanDecreaseAccuracy[30],
+  geom_hline(yintercept = (mean(rf_matrix_UnfilFil_mda$MeanDecreaseAccuracy)),
              col = "red") +
   mda_theme
 dev.off()

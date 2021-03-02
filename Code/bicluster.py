@@ -28,13 +28,13 @@ sample = df.pop(args.sample_column)
 
 #Designing the plot
 g = sns.clustermap(df, cmap = current_palette, robust = True, yticklabels = sample, xticklabels = 1)
-plt.setp(g.ax_heatmap.xaxis.get_ticklabels(), fontsize = 15)
+plt.setp(g.ax_heatmap.xaxis.get_ticklabels(), fontsize = 5)
 plt.setp(g.ax_heatmap.yaxis.get_ticklabels(), fontsize = 20)
 plt.gcf().subplots_adjust(bottom=0.35)
 fig = plt.gcf()
-fig.set_size_inches((20, 30))
+fig.set_size_inches((20, 20))
 
 
 #Showing the plot
-plt.savefig('compound_mixed_hc_new.png', format = 'png', dpi = 1000)
+plt.savefig('feature_org_hc_20210209.svg', format = 'svg', dpi = 1000)
 plt.show()

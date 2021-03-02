@@ -1,5 +1,5 @@
 ## Script for analyzing Psuedonitzchia dataset
-## Written by Zach Quinlan for Irina Koester 
+## Written by Zach Quinlan and Irina Koester 
 ## Created 11/08/2019
 ## Modified into .R rather than .RMD 11/12/2019
 ## Merged with changes from Irina on 11/12/2019
@@ -76,13 +76,16 @@ metadata_quant <- read_tsv("./Raw/Pn_metadata_table.tsv")%>%
   rename(sample_code_ms = filename)%>%
   rename_sample_codes_ms()
 
-lib_id <- read_tsv("Raw/GNPS_LibIds.tsv")%>%
+lib_id <- read_csv("Raw/Pn_LibIds0.7.csv")%>%
+  rename(feature_number = '#Scan#')%>%
+  mutate(feature_number = as.character(feature_number))
+
+combined_classyfire <- read_csv("./Raw/Pn_combined_Classyfire.csv")%>%
   rename(feature_number = '#Scan#')%>%
   mutate(feature_number = as.character(feature_number))
 
 cat_df <- read_csv("./Raw/Input_Canopus.csv")
 
-chl <- read_xlsx("Raw/Pn_Ex2_Chlorophyll.xlsx")
 chl <- read_csv("Raw/Pn_Ex2_Chlorophyll.csv")
 
 feature_info <- read_csv("./Raw/ZODIAC_ElementalComposition_input.csv")%>%
@@ -219,7 +222,17 @@ otu_stats <- otu_clean%>%
   mutate(ra = reads/sum(reads),
          asin = asin(sqrt(ra)))
   
-  
+otu_stats_bothExp <- otu_clean%>%
+  separate(sample_code_16S, c("Experiment", "Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
+  filter(Experiment == "Exp2"|Experiment == "Exp1")%>%
+  unite(sample_code_16S, c("Experiment","Organism", "biological_replicate", "technical_replicates"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(reads) != 0)%>%
+  filter(!Taxonomy %like any% c('%Eukaryota%', '%Cyanobacteria%'))%>%
+  ungroup()%>%
+  group_by(sample_code_16S)%>%
+  mutate(ra = reads/sum(reads),
+         asin = asin(sqrt(ra)))  
 
 family_stats <- otu_stats%>%
   separate(Taxonomy, c("otu_number", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus"), sep = ";")%>%
@@ -552,8 +565,13 @@ write_csv(feature_info_test_DOM_canopus, "Analyzed/Ttest_canopus_dom.csv")
 # PRE-MATRIX QUANT AND CAT -- Organism ---------------------------------------------
 cat_clean_org <- cat_prob%>%
   filter(FeatureID %in% important_quant_org)%>%
+  gather(cat, prob, 2:ncol(.))%>%
+  group_by(cat)%>%
+  filter(max(prob) > 0.5)%>%
+  ungroup()%>%
+  filter(cat %in% important_canopus_org)%>%
+  spread(cat, prob)%>%
   column_to_rownames("FeatureID")%>%
-  select(important_canopus_org)%>%
   data.matrix(rownames.force = NA)
 
 write.csv(cat_clean_org,"./Analyzed/cat_clean_org.csv")
@@ -580,13 +598,18 @@ quant_binary_org <-  quant_binary_org_df%>%
 write.csv(quant_binary_org,"./Analyzed/quant_binary_org.csv")
 
 
-
 # PRE-MATRIX QUANT AND CAT -- DOM_Fil ---------------------------------------------
 cat_clean_dom <- cat_prob%>%
   filter(FeatureID %in% important_quant_dom)%>%
+  gather(cat, prob, 2:ncol(.))%>%
+  group_by(cat)%>%
+  filter(max(prob) > 0.5)%>%
+  ungroup()%>%
+  filter(cat %in% important_canopus_dom)%>%
+  spread(cat, prob)%>%
   column_to_rownames("FeatureID")%>%
-  select(important_canopus_dom)%>%
   data.matrix(rownames.force = NA)
+
 
 write.csv(cat_clean_dom,"./Analyzed/cat_clean_dom.csv")
 
@@ -750,19 +773,6 @@ rf_matrix <- randomForest(Organism ~ ., multi_matrix_random_forest_df,
                           importance = TRUE, proximity = TRUE, nPerm = 10,
                           ntree = 50000, na.action = na.exclude)
 
-top3_org <- (rf_matrix$importance%>% 
-                  as.data.frame()%>%
-                  rownames_to_column("feature")%>%
-                  top_n(3, MeanDecreaseAccuracy))$feature%>%
-  as.vector()
-
-important_matrix_org <- (rf_matrix$importance%>% 
-                           as.data.frame()%>%
-                           rownames_to_column("feature")%>%
-                           filter(MeanDecreaseAccuracy >= mean(MeanDecreaseAccuracy) + sd(MeanDecreaseAccuracy)))$feature%>%
-  unique()%>%
-  as.vector()
-
 important_matrix_org <- (rf_matrix$importance%>% 
                            as.data.frame()%>%
                            rownames_to_column("feature")%>%                         
@@ -792,11 +802,6 @@ rf_matrix_UnfilFil <- randomForest(DOM_fil ~ ., multi_matrix_random_forest_Unfil
                           importance = TRUE, proximity = TRUE,
                           ntree = 50000, na.action=na.exclude)
 
-top30_unfil <- (rf_matrix_UnfilFil$importance%>%
-                  as.data.frame()%>%
-                  rownames_to_column("feature")%>%
-                  top_n(30, MeanDecreaseAccuracy))$feature%>%
-  as.vector()
 
 important_matrix_unfil <- (rf_matrix_UnfilFil$importance%>% 
                            as.data.frame()%>%
@@ -807,22 +812,12 @@ important_matrix_unfil <- (rf_matrix_UnfilFil$importance%>%
 
 rf_matrix_UnfilFil_mda <- rf_matrix_UnfilFil$importance%>%
   as.data.frame()%>%
-  rownames_to_column("feature")%>%
-  mutate(mean_decrease_important = case_when(feature %like any% top30_unfil ~ "important",
-                                             TRUE ~ "not important"),
-         dom_mda_important = case_when(DOM >= (top_n(., 30, DOM)%>%
-                                                   arrange(-DOM))$DOM[30]~ "important",
-                                       TRUE ~ "not important"),
-         filt_mda_important = case_when(Unfil >= (top_n(., 30, Unfil)%>%
-                                                 arrange(-Unfil))$Unfil[30]~ "important",
-                                       TRUE ~ "not important"))
+  rownames_to_column("feature")
 
-write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.05.csv")
+write_csv(rf_matrix_UnfilFil_mda,"./Analyzed/RF_matrix_UnfilFil_mda.csv")
 
 ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = MeanDecreaseAccuracy)) +
   geom_point(stat = "identity")
-
-
 
 
 # POST-STATS -- mini-matrix organism -----------------------------------------------
@@ -849,6 +844,19 @@ mini_matrix_dom <- matrix_multiplied_dom%>%
 
 write_csv(mini_matrix_org, "Analyzed/mini_matrix_important_dom.csv")
 
+# Cat_Clean for heatmap -- Organism ---------------------------------------------
+cat_clean_org_RF <- cat_prob%>%
+  filter(FeatureID %in% important_quant_org)%>%
+  gather(cat, prob, 2:ncol(.))%>%
+  group_by(cat)%>%
+  filter(max(prob) > 0.5)%>%
+  ungroup()%>%
+  filter(cat %in% important_matrix_org)%>%
+  spread(cat, prob)%>%
+  column_to_rownames("FeatureID")%>%
+  data.matrix(rownames.force = NA)
+
+write.csv(cat_clean_org_RF,"./Analyzed/cat_clean_org_RF.csv")
 
 # STATS Correlation analysis - matrix ----------------------------------------------
 ## Correlation analysis
@@ -1116,8 +1124,30 @@ feature_org_hc <- mini_quant_org%>%
   select(-c(asin, DOM_fil))%>%
   left_join(lib_id%>%
               select(feature_number, Compound_Name), by = "feature_number")%>%
-  unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  #unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  left_join(combined_classyfire%>%
+              select(feature_number, "Parent Level 1"), by = "feature_number")%>%
+  unite(feature, c(feature_number, Compound_Name, "Parent Level 1"), sep = "_")%>%
   unite(sample, c("Organism", "biological_replicates"), sep = "_")%>%
+  spread(feature, zscore)
+
+feature_org_hc_all <- mini_quant_org%>%
+  gather(feature_number, asin, 6:ncol(.))%>%
+  group_by(feature_number)%>%
+  mutate(zscore = (asin - mean(asin))/sd(asin))%>%
+  ungroup()%>%
+  group_by(feature_number, Organism, biological_replicates, DOM_fil)%>%
+  select(-technical_replicates)%>%
+  summarize_if(is.numeric, mean)%>%
+  ungroup()%>%
+  select(-c(asin))%>%
+  left_join(lib_id%>%
+              select(feature_number, Compound_Name), by = "feature_number")%>%
+  #unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  left_join(combined_classyfire%>%
+              select(feature_number, "Parent Level 1"), by = "feature_number")%>%
+  unite(feature, c(feature_number, Compound_Name, "Parent Level 1"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicates","DOM_fil"), sep = "_")%>%
   spread(feature, zscore)
 
 feature_dom_hc <- mini_quant_dom%>%
@@ -1130,10 +1160,12 @@ feature_dom_hc <- mini_quant_dom%>%
   summarize_if(is.numeric, mean)%>%
   ungroup()%>%
   select(-c(asin))%>%
-  unite(sample, c("Organism", "biological_replicates", "DOM_fil"), sep = "_")%>%
   left_join(lib_id%>%
               select(feature_number, Compound_Name), by = "feature_number")%>%
-  unite(feature, c(feature_number, Compound_Name), sep = "_")%>%
+  left_join(combined_classyfire%>%
+              select(feature_number, "Parent Level 1"), by = "feature_number")%>%
+  unite(feature, c(feature_number, Compound_Name, "Parent Level 1"), sep = "_")%>%
+  unite(sample, c("Organism", "biological_replicates", "DOM_fil"), sep = "_")%>%
   spread(feature, zscore)
   
 write_csv(compound_org_hc, "Analyzed/compound_org_hc.csv")
@@ -1141,6 +1173,7 @@ write_csv(compound_org_hc_DOM, "Analyzed/compound_org_hc_DOM.csv")
 write_csv(compound_dom_hc, "Analyzed/compound_dom_hc.csv")
 write_csv(compound_mixed_hc, "Analyzed/compound_mixed_hc.csv")
 write_csv(feature_org_hc, "Analyzed/feature_org_hc.csv")
+write_csv(feature_org_hc_all, "Analyzed/feature_org_hc_all.csv")
 write_csv(feature_dom_hc, "Analyzed/feature_dom_hc.csv")
 
 
@@ -1472,10 +1505,10 @@ if (!require("RColorBrewer")) install.packages("RColorBrewer")
 library(RColorBrewer)
 brewer.pal.info
 
-colors_taxonomy <- c("#f27304", "#F68F1D", "#FAAC35",
-                     "#2d67c7",
-                     "#7C28A8", "#ae2da9",
-                     "#75D648","#68C946","#5BBC43","#4EAF41","#40A13E","#33943C","#268739")
+colors_taxonomy <- c("#2B503C", "#40775A", "#519872",
+                     "#FFF3B0",
+                     "#5E6982", "#7D88A1",
+                     "#A32978","#AF3F88","#BB5597","#C76BA7","#D381B6","#DF97C6","#EBADD5")
 ##greybrown757761, purplemix 952BA9
 otu_vis%>%  
   filter(Experiment == "Exp2")%>%
@@ -1523,7 +1556,7 @@ pcoa_quant$values[1:10,]%>%
 
 ## otu Exp1 and 2 del, sub, mul
 
-pcoa_otu_bothExp <- otu_stats%>%
+pcoa_otu_bothExp <- otu_stats_bothExp%>%
   filter(sample_code_16S != "Exp1_Pn-subpacifica_A_I", 
          sample_code_16S != "Exp1_Pn-subpacifica_A_II",
          sample_code_16S != "Exp1_Pn-delicatissima_B_I",
@@ -1620,7 +1653,7 @@ pcoa_dom$values[1:10,]%>%
 pcoa_settings <- function(x) {
   ggplot(x, aes(Axis.1, Axis.2, color = Organism, shape = DOM_fil)) +
   geom_point(stat = "identity", size = 4) +
-    scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
+    scale_color_manual(values = c("#75d648", "#64d6f7", "#2d67c7", "#f27304", "#fec601")) +
     scale_shape_manual(values=c(1, 16))+
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
@@ -1654,7 +1687,7 @@ pcoa_otu_bothExp$vectors%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
   geom_point(size = 4) +
-  scale_color_manual(values = c("#75d648", "#f27304", "#64d6f7")) +
+  scale_color_manual(values = c("#75d648", "#f27304", "#fec601")) +
   scale_shape_manual(values=c(17,16))+
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
@@ -1677,7 +1710,7 @@ pcoa_otu_Exp2$vectors%>%
   separate(sample_code, c("Experiment", "Organism", "biological_replicates", "technical_replicates"), sep = "_")%>%
   ggplot(aes(Axis.1, Axis.2, color = Organism, shape = Experiment)) +
   geom_point(stat = "identity", aes(size = 0.1)) +
-  scale_color_manual(values = c("#75d648", "#ae2da9", "#2d67c7", "#f27304", "#64d6f7")) +
+  scale_color_manual(values = c("#75d648", "#64d6f7", "#2d67c7", "#f27304", "#fec601")) +
   theme(panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
         axis.title.x = element_text(size=14, face="bold"),
@@ -1772,7 +1805,6 @@ ggplot(rf_matrix_UnfilFil_mda, aes(x= reorder(feature, -MeanDecreaseAccuracy), y
              col = "red") +
   mda_theme
 dev.off()
-
 
 
 

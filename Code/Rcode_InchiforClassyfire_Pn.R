@@ -26,13 +26,13 @@ rename <- dplyr::rename
 
 ##read in files from GNPS: LibIds and Analogs
 
-LibIDs <- read_tsv("./Raw/Pn_LibIds0.7.tsv")%>%
+LibIDs <- read_csv("./Raw/Pn_LibIds0.7.csv")%>%
   gather(col, val, 2:ncol(.))%>%
   mutate(var = "library")%>%
   unite(col, c(col, var), sep = "_")%>%
   spread(col, val)
 
-Analogs <- read_tsv("./Raw/Pn_Analogs0.8.tsv")%>%
+Analogs <- read_csv("./Raw/Pn_Analog0.8.csv")%>%
   gather(col, val, 2:ncol(.))%>%
   mutate(var = "analog")%>%
   unite(col, c(col, var), sep = "_")%>%

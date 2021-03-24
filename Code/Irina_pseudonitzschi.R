@@ -63,6 +63,11 @@ sample_rename <- read_csv("./Raw/Rename_MS_SampleIDs.csv")%>%
   rename(sample_code_ms = ID_MS,
          sample_code = ID_new)
 
+library_info <- read_tsv("./Raw/clusterinfo_summary.tsv")%>%
+  select(c('componentindex', 'cluster index'))%>%
+  rename('feature_number' = 'cluster index')%>%
+  rename('network' = 'componentindex')
+
 quant_raw <- read_csv("./Raw/quant_all.csv")%>%
   select(-c(2:3))%>%
   rename(feature_number = 1)%>%
@@ -108,6 +113,10 @@ otu_df <- read_csv("./Raw/no-plastids-dada2-table.csv")%>%
   mutate(Taxon = gsub('D_[0-9]__', '', Taxon))%>%
   select(-c("#OTU ID", "Confidence"))%>%
   select("Taxon",everything())
+
+analog_libs <- (read_csv("./Raw/Pn_GNPS_combined_Inchikeys.csv")%>%
+  rename(feature_number = 1))$feature_number%>%
+  as.vector()
   
 
 
@@ -1287,6 +1296,41 @@ cyto_full <- cyto_exp2_org%>%
 write_csv(cyto_full, "./Analyzed/cyto_node_table.csv")
 
 
+
+# VIZUALIZATIONS -- network classification stats --------------------------
+classification <- library_info%>%
+  left_join(lib_id%>%
+              mutate(feature_number = as.numeric(feature_number))%>%
+              select('feature_number', 'Compound_Name'), 
+            by = 'feature_number')%>%
+  left_join(feature_info%>%
+              select('feature_number', 'ZodiacScore'), 
+            by = 'feature_number')%>%
+  mutate(comps = case_when(network == -1 ~ -feature_number,
+                           network != -1 ~ network))%>%
+  nest(data = everything())%>%
+  mutate(libs_no_single = map(data, ~ filter(.x, network != '-1',
+                                             feature_number %in% analog_libs)%>%
+                                select('network')%>%
+                                unique()%>%
+                                nrow()),
+         libs_all = map(data, ~ filter(.x, feature_number %in% analog_libs)%>%
+                          select('comps')%>%
+                          unique()%>%
+                          nrow()),
+         zodiac_no_single = map(data, ~ filter(.x, network != '-1',
+                                               ZodiacScore > 0.98)%>%
+                                  select('network')%>%
+                                  unique()%>%
+                                  nrow()),
+         zodiac_all = map(data, ~ filter(.x, ZodiacScore > 0.98)%>%
+                            select('comps')%>%
+                            unique()%>%
+                            nrow()))%>%
+  select(-1)%>%
+  unnest(c(libs_no_single, libs_all, zodiac_no_single, zodiac_all))
+
+write_csv(classification, "Analyzed/classification_levels.csv")
 
 # VISUALIZATION -- Boxplots binary %N-------------------------------------------
 #how many features have nitrogen out of the important features

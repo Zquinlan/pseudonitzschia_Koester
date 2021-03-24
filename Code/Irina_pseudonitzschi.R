@@ -321,7 +321,7 @@ quant_permanova_org <- quant_stats%>%
 
 
 # STATS PERMANOVA - ASV  ---------------------------------------------------
-
+  
 # STATS ANOVA -- Quant One-way -------------------------------------------------------------------
 aov_pvalues <- quant_stats%>%
   group_by(feature_number)%>%
@@ -1308,27 +1308,16 @@ classification <- library_info%>%
             by = 'feature_number')%>%
   mutate(comps = case_when(network == -1 ~ -feature_number,
                            network != -1 ~ network))%>%
-  nest(data = everything())%>%
-  mutate(libs_no_single = map(data, ~ filter(.x, network != '-1',
-                                             feature_number %in% analog_libs)%>%
-                                select('network')%>%
-                                unique()%>%
-                                nrow()),
-         libs_all = map(data, ~ filter(.x, feature_number %in% analog_libs)%>%
-                          select('comps')%>%
-                          unique()%>%
-                          nrow()),
-         zodiac_no_single = map(data, ~ filter(.x, network != '-1',
-                                               ZodiacScore > 0.98)%>%
-                                  select('network')%>%
-                                  unique()%>%
-                                  nrow()),
-         zodiac_all = map(data, ~ filter(.x, ZodiacScore > 0.98)%>%
-                            select('comps')%>%
-                            unique()%>%
-                            nrow()))%>%
-  select(-1)%>%
-  unnest(c(libs_no_single, libs_all, zodiac_no_single, zodiac_all))
+  group_by(comps)%>%
+  mutate(libs_count = case_when(feature_number %in% analog_libs ~ 1,
+                                TRUE ~ 0),
+         libs_count = max(libs_count),
+         zodiac_count = case_when(ZodiacScore > 0.98 ~ 1,
+                                  TRUE ~ 0),
+         feature_count = max(zodiac_count))%>%
+  ungroup()%>%
+  select('libs_count', 'zodiac_count')%>%
+  summarize_all(sum)
 
 write_csv(classification, "Analyzed/classification_levels.csv")
 

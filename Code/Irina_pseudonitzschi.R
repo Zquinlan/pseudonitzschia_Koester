@@ -305,17 +305,24 @@ set.seed(295034) # Setting the seed before we do any stats
 
 
 # STATS PERMANOVA - Quant org and unfilfil  ---------------------------------------------------
-quant_permanova_org <- quant_stats%>%
-  unite(feature, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                  "technical_replicates"), sep = "_")%>%
+quant_permanova <- quant_stats%>%
+  filter(Experiment == 'Exp2')%>%
+  mutate(toxin = case_when(Organism %like% '%sub%' ~ 'toxic',
+                           Organism %like% '%mul%' ~ 'toxic',
+                           TRUE ~ 'non_toxic'))%>%
+  select(toxin, everything())%>%
   spread(feature_number, asin)
 
+quant_toxin_permanova_exp2 <- quant_permanova%>%
+  adonis(.[8:ncol(.)] ~ toxin, ., perm = 1000, method = "bray", na.rm = TRUE)
+
+quant_organism_permanova_exp2 <- quant_permanova%>%
+  adonis(.[8:ncol(.)] ~ Organism, ., perm = 1000, method = "bray", na.rm = TRUE)
+
+quant_toxin_permanova_exp2
+quant_organism_permanova_exp2
+
   
-  gather(category, mult, 2:ncol(.))%>%
-  mutate(mult = mult +1)%>%
-  spread(category, mult)%>%
-  separate(sample_code, c("Experiment", "Organism", "biological_replicates", "DOM_fil", 
-                          "technical_replicates"), sep = "_")
 
 ##still needs to be finished....
 

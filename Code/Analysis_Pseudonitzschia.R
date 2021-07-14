@@ -781,7 +781,7 @@ matrix_permanova_org <- matrix_multiplied_org%>%
 
 permanova_matrix_org <- matrix_permanova_org%>%
   # column_to_rownames("sample_code")%>%
-  adonis(.[7:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
+  adonis(.[6:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
 
 permanova_matrix_org
 
@@ -793,7 +793,7 @@ matrix_permanova_dom <- matrix_multiplied_dom%>%
 
 permanova_matrix_dom <- matrix_permanova_dom%>%
   # column_to_rownames("sample_code")%>%
-  adonis(.[7:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
+  adonis(.[6:ncol(.)] ~ Organism+DOM_fil, ., perm = 1000, method = "bray", na.rm = TRUE) 
 
 permanova_matrix_dom
 
@@ -828,13 +828,13 @@ aov_matrix_dom <- multi_matrix_tidy_dom%>%
 matrix_aov_dom_sig <- aov_matrix_dom$category%>%
   as.vector()
 
-write_csv(aov_matrix_org, "Analyzed/anova_pvals_matrix_dom.csv")
+write_csv(aov_matrix_dom, "Analyzed/anova_pvals_matrix_dom.csv")
 
 # STATS RANDOM FOREST -- Matrix  Organism-------------------------------------------
 multi_matrix_random_forest_df <- multi_matrix_tidy_org%>%
   filter(category %in% matrix_aov_org_sig)%>%
   spread(category, mult)%>%
-  select(c(Organism, 7:ncol(.)))%>%
+  select(c(Organism, 6:ncol(.)))%>%
   mutate(Organism = as.factor(Organism))
 
 
@@ -864,7 +864,7 @@ ggplot(rf_matrix_mda_org, aes(x= reorder(feature, -MeanDecreaseAccuracy), y = Me
 multi_matrix_random_forest_UnfilFil_df <- multi_matrix_tidy_dom%>%
   filter(category %in% matrix_aov_dom_sig)%>%
   spread(category,mult)%>%
-  select(c(DOM_fil, 7:ncol(.)))%>%
+  select(c(DOM_fil, 6:ncol(.)))%>%
   mutate(DOM_fil = as.factor(DOM_fil))
 
 names(multi_matrix_random_forest_UnfilFil_df) <- make.names(names(multi_matrix_random_forest_UnfilFil_df))
@@ -1267,56 +1267,29 @@ boxplot_N_binary_perc%>%
 #facet_wrap(~DOM_fil)
 
 
-# VISUALIZATION -- OTU table for SI
-###write file for OTU table (all in Exp 2)
 
-### calculate RA total Exp2 and RA for each org
-otu_tableRA <- otu_stats%>%
-  separate(sample_code_16S, c("Experiment", "Organism", 
-                              "biological_replicates", "technical_replicates"), sep = "_")%>%
-  filter(Experiment == "Exp2")%>%
-  group_by(Taxonomy)%>%
-  filter(sum(asin) != 0)%>%
-  ungroup()%>%
-  mutate(Organism = as.factor(Organism))%>%
-  group_by(Experiment, Taxonomy)%>%
-  unite(sample_name, c("Experiment", "Organism", "biological_replicates",
-                       "technical_replicates"), sep = "_")%>%
-  select(-c(ra, asin))%>%
-  spread(sample_name, reads)
+#EXPORT TABLES
+### SI Tables: Table S1 Spectral Matches information
+libraryFeatures <- lib_id%>%
+  select(feature_number)
 
+analogId <- read_csv('./Raw/Pn_Analog0.8.csv')%>%
+  rename(feature_number = 1)%>%
+  mutate(feature_number = as.character(feature_number))%>%
+  anti_join(libraryFeatures, by  = 'feature_number')%>%
+  mutate(id_source = 'Analog')
 
-
-otu_tableRATest <- otu_stats%>%
-  separate(sample_code_16S, c("Experiment", "Organism", 
-                              "biological_replicates", "technical_replicates"), sep = "_")%>%
-  filter(Experiment == "Exp2")%>%
-  group_by(Taxonomy)%>%
-  filter(sum(asin) != 0)%>%
-  ungroup()%>%
-  mutate(Organism = as.factor(Organism))%>%
-  group_by(Experiment, Taxonomy)%>%
-  unite(sample_name, c("Experiment", "Organism"), sep = "_")%>%
-  select(-c(reads, asin, biological_replicates, technical_replicates))%>%
-  spread(sample_name, ra)
-  
-  summarize_if(is.numeric, mean)
-
-
-### add ANOVA and RF results to table
-otu_tableSI <- otu_tableRA%>%
-  left_join(otu_aov%>%
-            select('Taxonomy', 'FDR'), 
-          by = 'Taxonomy')%>%
-  left_join(otu_rf_mda%>%
-              rename('Taxonomy' = 'feature')%>%
-              select('Taxonomy', 'MeanDecreaseAccuracy'),
-            by = 'Taxonomy')
-
-all_otu <- otu_tableSI$Taxonomy%>%
-  as.vector()
-
-write_csv(otu_tableSI, "Analyzed/ASV_info_table.csv")
+siTable1 <- lib_id%>%
+  mutate(id_source = 'LibraryID')%>%
+  bind_rows(analogId)%>%
+  select(feature_number, id_source, everything())%>%
+  left_join(combined_classyfire%>%
+              select(feature_number, 6:ncol(.)), by = 'feature_number')%>%
+  mutate(important_org = case_when(feature_number %in% important_quant_org ~ 'yes',
+                                   TRUE ~ 'no'),
+         important_dom = case_when(feature_number %in% important_quant_dom ~ 'yes',
+                                   TRUE ~ 'no'))
+write_csv(siTable1, "Analyzed/TableS1_Spectralmatches.csv")
 
 
 # VISUALIZATIONS -- Class/Family stacked bar chart--------------------------------------
@@ -1332,6 +1305,13 @@ colors_taxonomy <- c("#2B503C", "#40775A", "#519872",
                      "#FFF3B0",
                      "#5E6982", "#7D88A1",
                      "#A32978","#AF3F88","#BB5597","#C76BA7","#D381B6","#DF97C6","#EBADD5")
+
+otu_vis <- otu_stats%>%
+  separate(sample_code_16S, c("Experiment", "Organism", 
+                              "biological_replicates", "technical_replicates"), sep = "_")%>%
+  group_by(Taxonomy)%>%
+  filter(sum(asin) != 0)%>%
+  ungroup()
 
 otu_test <- otu_vis%>%  
   filter(Experiment == "Exp2")%>%

@@ -19,5 +19,5 @@ R Pipeline used to analyze the data
 - InchiforClassyfire_Pseudonitzschia
 R code to tranforming spectral matches Inchi to InCHIKey for Classyfire
 
-bicluster
+- bicluster
 Python code to plot two-way hierachical clusters

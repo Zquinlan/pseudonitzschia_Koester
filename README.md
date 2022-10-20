@@ -1,5 +1,5 @@
 # pseudonitzschia Koester
-
+[![DOI](https://zenodo.org/badge/221773240.svg)](https://zenodo.org/badge/latestdoi/221773240)
 
 ### Folders:
 #### Data
